@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { UserCog, Mail, KeyRound, LogOut, Wrench, RotateCcw, Languages, Building2, Bell, Database, Download, Upload, ImagePlus, Check, Info, Lock, Clock } from 'lucide-vue-next'
 import PageHeader from '@/components/crm/PageHeader.vue'
@@ -24,6 +24,10 @@ const errors = reactive({})
 const saving = ref(false)
 ensureCrmLoaded().then(() => Object.assign(draft, JSON.parse(JSON.stringify(crmStore.settings))))
 const dirty = computed(() => crmStore.loaded && JSON.stringify(draft) !== JSON.stringify(crmStore.settings))
+// Boshqa administrator sozlamani o‘zgartirsa: tahrirlanmagan qoralama avtomatik yangilanadi, tahrirlangani esa saqlanib qoladi
+watch(() => crmStore.settings, (next, prev) => {
+  if (prev && JSON.stringify(draft) === JSON.stringify(prev)) Object.assign(draft, JSON.parse(JSON.stringify(next)))
+})
 
 const SYSTEM = [
   { key: 'moderation', label: 'E’lonlarni oldindan tekshirish', text: 'Yangi e’lonlar tasdiqlangandan keyin chiqadi.' },

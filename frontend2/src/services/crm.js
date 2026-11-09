@@ -26,20 +26,42 @@ export const crmStore = reactive({
   refreshedAt: null,
 })
 
+/** Oxirgi yuklangan ma’lumotlarning server o‘zgarish belgilari (live.js shular bilan solishtiradi) */
+export const known = {}
+const getVersions = () => http('/crm/changes').then((r) => r.versions).catch(() => null)
+
 /** Barcha kolleksiyalarni serverdan yuklash (yoki yangilash) */
 export async function refreshCrm() {
   try {
+    // Belgilar ma’lumotdan OLDIN olinadi: yuklash paytida kelgan o‘zgarish keyingi tekshiruvda albatta ushlanadi
+    const versions = await getVersions()
     const keys = Object.keys(SOURCES)
     const [settings, ...lists] = await Promise.all([http('/crm/settings'), ...keys.map((k) => http(SOURCES[k]))])
     keys.forEach((k, i) => (crmStore[k] = lists[i]))
     crmStore.settings = settings
     crmStore.error = null
     crmStore.refreshedAt = Date.now()
+    if (versions) for (const k of [...keys, 'settings']) known[k] = versions[k]
   } catch (e) {
     crmStore.error = e.message
     if (!crmStore.loaded) throw e
   } finally {
     crmStore.loaded = true
+  }
+}
+
+/** Faqat o‘zgargan kolleksiyalarni qayta yuklash (avtomatik yangilanish) */
+export async function refreshCollections(keys, versions) {
+  const prev = Object.fromEntries(keys.map((k) => [k, known[k]]))
+  keys.forEach((k) => (known[k] = versions[k]))
+  try {
+    const data = await Promise.all(keys.map((k) => http(k === 'settings' ? '/crm/settings' : SOURCES[k])))
+    keys.forEach((k, i) => { if (k === 'settings' || SOURCES[k]) crmStore[k] = data[i] })
+    crmStore.error = null
+    crmStore.refreshedAt = Date.now()
+  } catch (e) {
+    Object.assign(known, prev) // keyingi tekshiruvda qayta urinadi
+    throw e
   }
 }
 

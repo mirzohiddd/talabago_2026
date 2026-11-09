@@ -7,15 +7,18 @@
  */
 import { reactive } from 'vue'
 import { http, httpForm } from './http'
+import { known } from './crm'
 import { sortAds } from '@/config/ads'
 
 export const adsStore = reactive({ items: [], loaded: false, error: null })
 const find = (id) => adsStore.items.find((a) => a.id === id)
 
 let loading = null
-export async function refreshAds() {
+export async function refreshAds(version) {
   try {
+    const v = version ?? (await http('/crm/changes').then((r) => r.versions.ads).catch(() => undefined))
     adsStore.items = await http('/ads')
+    if (v !== undefined) known.ads = v
     adsStore.error = null
   } catch (e) {
     adsStore.error = e.message

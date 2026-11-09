@@ -1,6 +1,7 @@
 """TalabaGo API — FastAPI ilovasi. Ishga tushirish: uvicorn app.main:app --host 0.0.0.0 --port 8000"""
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import shutil
@@ -25,14 +26,58 @@ SEED_DIR = Path(__file__).parent / 'seed'
 API_PREFIX = '/api/v1'
 
 
+def env_admin_id(username: str) -> str:
+    """Muhitdan yaratiladigan administrator ID’si doimiy (login’dan hosil qilinadi): disk tozalansa (Render qayta ishga tushishi)
+    va admin qayta yaratilsa ham ID o‘zgarmaydi — brauzerdagi sessiya “Sessiya bekor qilingan” bo‘lib qolmaydi."""
+    return 'adm_' + hashlib.sha256(username.strip().lower().encode()).hexdigest()[:16]
+
+
+def sync_env_admin(settings: Settings, db: dict) -> str | None:
+    """
+    ADMIN_USERNAME + ADMIN_PASSWORD_HASH (muhit o‘zgaruvchilari) bo‘yicha administrator:
+      * bunday login yo‘q bo‘lsa — yaratiladi;
+      * ADMIN_PASSWORD_HASH yangi qiymatga o‘zgartirilgan bo‘lsa — parol yangilanadi va eski sessiyalar bekor qilinadi.
+    Bir xil xesh bilan qayta ishga tushganda hech narsa o‘zgarmaydi (panelda o‘zgartirilgan parol saqlanib qoladi).
+    Ochiq parol hech qayerda saqlanmaydi va logga yozilmaydi.
+    """
+    username, phash = settings.ADMIN_USERNAME, settings.ADMIN_PASSWORD_HASH
+    if not username:
+        return None
+    if not phash.startswith('scrypt$'):
+        if phash:
+            log.warning('ADMIN_PASSWORD_HASH noto‘g‘ri formatda (scrypt$...). Yaratish: python -m app.cli hash-password')
+        return None
+    fingerprint = hashlib.sha256(phash.encode()).hexdigest()[:16]  # xeshning o‘zi emas — faqat “o‘zgarganmi” belgisi
+    admin = next((a for a in db['admins'] if a['username'].lower() == username.lower()), None)
+    now = C.now_iso()
+    if not admin:
+        aid = env_admin_id(username)
+        if any(a['id'] == aid for a in db['admins']):
+            aid = C.new_id('adm')
+        db['admins'].append({'id': aid, 'username': username, 'name': username, 'passwordHash': phash, 'status': 'active',
+                             'tokenVersion': 0, 'envHashApplied': fingerprint, 'createdAt': now})
+        return 'created'
+    if admin.get('envHashApplied') != fingerprint:
+        changed = admin.get('passwordHash') != phash
+        admin['passwordHash'] = phash
+        admin['envHashApplied'] = fingerprint
+        admin['status'] = 'active'
+        if changed:
+            admin['tokenVersion'] = admin.get('tokenVersion', 0) + 1  # eski parol bilan ochilgan sessiyalar bekor
+            admin['updatedAt'] = now
+            return 'password-updated'
+    return None
+
+
 def bootstrap(settings: Settings) -> None:
-    """Birinchi ishga tushish: administrator (.env dagi xeshdan) va boshlang‘ich kurs kontenti."""
+    """Ishga tushish: administrator (muhitdagi xeshdan) va boshlang‘ich kurs kontenti."""
     store = get_store(settings)
     with store.tx('admins', 'courses', 'meta') as db:
-        if not db['admins'] and settings.ADMIN_USERNAME and settings.ADMIN_PASSWORD_HASH.startswith('scrypt$'):
-            db['admins'].append({'id': C.new_id('adm'), 'username': settings.ADMIN_USERNAME, 'name': settings.ADMIN_USERNAME,
-                                 'passwordHash': settings.ADMIN_PASSWORD_HASH, 'status': 'active', 'tokenVersion': 0, 'createdAt': C.now_iso()})
+        result = sync_env_admin(settings, db)
+        if result == 'created':
             log.info('Administrator yaratildi: %s', settings.ADMIN_USERNAME)
+        elif result == 'password-updated':
+            log.info('Administrator paroli ADMIN_PASSWORD_HASH bo‘yicha yangilandi: %s (eski sessiyalar bekor qilindi)', settings.ADMIN_USERNAME)
         if not db['meta'].get('coursesSeeded'):
             # Rus va ingliz tili kurslarining boshlang‘ich darslari (haqiqiy o‘quv kontenti; Support panelidan tahrirlanadi)
             if not db['courses']:
@@ -63,6 +108,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware, allow_origins=settings.cors_list, allow_origin_regex=settings.CORS_ORIGIN_REGEX or None, allow_credentials=True,
         allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allow_headers=['Authorization', 'Content-Type', 'X-Requested-With', 'X-Telegram-Init-Data'], max_age=600,
+        expose_headers=['X-Session-Expires', 'Retry-After'],
     )
 
     @app.middleware('http')

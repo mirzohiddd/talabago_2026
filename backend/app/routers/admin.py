@@ -62,6 +62,16 @@ def complaints(store: JsonStore = Depends(get_store)):
     return C.by_date_desc(store.read('complaints'))
 
 
+# Support paneli avtomatik yangilanishi: har bir kolleksiyaning o‘zgarish belgisi (JSON o‘qilmaydi — juda arzon).
+# Panel shu endpointni tez-tez so‘raydi va faqat belgisi o‘zgargan ro‘yxatlarni qayta yuklaydi.
+WATCHED = ('users', 'jobs', 'houses', 'applications', 'requests', 'courses', 'progress', 'tickets', 'complaints', 'settings', 'ads')
+
+
+@router.get('/crm/changes')
+def changes(store: JsonStore = Depends(get_store)):
+    return {'versions': store.versions(*WATCHED), 'serverTime': C.now_iso()}
+
+
 @router.get('/crm/support/tickets')
 def tickets(store: JsonStore = Depends(get_store)):
     return C.by_date_desc(store.read('tickets'), 'updatedAt')

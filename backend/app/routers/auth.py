@@ -1,16 +1,14 @@
 """Ro‘yxatdan o‘tish va kirish: foydalanuvchilar (telefon+parol yoki Telegram initData) va administratorlar."""
 from __future__ import annotations
 
-from datetime import timedelta
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from .. import common as C
 from .. import ratelimit
 from ..config import Settings, get_settings
-from ..deps import ADMIN_COOKIE, get_admin, get_current_user, get_store, issue_user_token, platform_settings
+from ..deps import clear_admin_cookie, get_admin, get_current_user, get_store, issue_admin_token, issue_user_token, platform_settings, set_admin_cookie
 from ..schemas import AdminLoginIn, LoginIn, PasswordIn, RegisterIn, TelegramAuthIn
-from ..security import create_token, hash_password, verify_password
+from ..security import hash_password, verify_password
 from ..storage import JsonStore
 from ..telegram import InitDataError, verify_init_data
 
@@ -119,11 +117,6 @@ def change_password(body: PasswordIn, user: dict = Depends(get_current_user), st
 
 
 # ======================================================================= administrator
-def _set_admin_cookie(response: Response, token: str, settings: Settings) -> None:
-    response.set_cookie(ADMIN_COOKIE, token, max_age=settings.ADMIN_TOKEN_HOURS * 3600, httponly=True,
-                        secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, path='/')
-
-
 def _admin_out(a: dict, exp) -> dict:
     return {'user': {'id': a['id'], 'username': a['username'], 'name': a.get('name') or a['username'], 'role': 'admin'},
             'expiresAt': exp.isoformat() if hasattr(exp, 'isoformat') else exp}
@@ -132,17 +125,22 @@ def _admin_out(a: dict, exp) -> dict:
 @router.post('/auth/admin/login')
 def admin_login(body: AdminLoginIn, request: Request, response: Response, settings: Settings = Depends(get_settings), store: JsonStore = Depends(get_store)):
     ip = ratelimit.client_ip(request)
-    fail_key = f'admin-fail:{ip}:{body.username.lower()}'
+    username = body.username.strip().lower()
+    fail_key = f'admin-fail:{ip}:{username}'
+    user_key = f'admin-fail-user:{username}'  # IP almashtirib parol tanlashga qarshi: login bo‘yicha umumiy chegara
     ratelimit.guard_failures(fail_key, LOGIN_FAILS, LOCK_WINDOW)
-    admin = next((a for a in store.read('admins') if a['username'].lower() == body.username.lower()), None)
+    ratelimit.guard_failures(user_key, LOGIN_FAILS * 4, LOCK_WINDOW)
+    admin = next((a for a in store.read('admins') if a['username'].lower() == username), None)
     if not admin or admin.get('status') == 'blocked' or not verify_password(body.password, admin.get('passwordHash')):
         ratelimit.record(fail_key)
+        ratelimit.record(user_key)
         raise HTTPException(401, 'Username yoki parol noto‘g‘ri')
     with store.tx('admins') as db:
         a = next(x for x in db['admins'] if x['id'] == admin['id'])
         a['lastLoginAt'] = C.now_iso()
-    token, exp = create_token(settings.JWT_SECRET_KEY, a['id'], 'admin', timedelta(hours=settings.ADMIN_TOKEN_HOURS), ver=a.get('tokenVersion', 0))
-    _set_admin_cookie(response, token, settings)
+    token, exp = issue_admin_token(settings, a)
+    set_admin_cookie(response, token, settings)
+    response.headers['X-Session-Expires'] = exp.isoformat()
     return _admin_out(a, exp)
 
 
@@ -154,7 +152,7 @@ def admin_me(admin: dict = Depends(get_admin)):
 
 @router.post('/auth/admin/logout', status_code=204)
 def admin_logout(response: Response, settings: Settings = Depends(get_settings)):
-    response.delete_cookie(ADMIN_COOKIE, path='/', secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE)
+    clear_admin_cookie(response, settings)
 
 
 @router.post('/auth/admin/password', status_code=204)
@@ -166,5 +164,5 @@ def admin_password(body: PasswordIn, response: Response, admin: dict = Depends(g
         a['passwordHash'] = hash_password(body.next)
         a['tokenVersion'] = a.get('tokenVersion', 0) + 1  # boshqa barcha sessiyalar bekor bo‘ladi
         a['updatedAt'] = C.now_iso()
-    token, _ = create_token(settings.JWT_SECRET_KEY, a['id'], 'admin', timedelta(hours=settings.ADMIN_TOKEN_HOURS), ver=a['tokenVersion'])
-    _set_admin_cookie(response, token, settings)
+    token, _ = issue_admin_token(settings, a)
+    set_admin_cookie(response, token, settings)

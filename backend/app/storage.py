@@ -144,6 +144,17 @@ class JsonStore:
             old.unlink(missing_ok=True)
 
     # ------------------------------------------------------------------ ommaviy API
+    def versions(self, *names: str) -> dict[str, str]:
+        """Kolleksiyalarning o‘zgarish belgisi (fayl mtime + hajm). JSON o‘qilmaydi — har bir worker’da arzon va bir xil."""
+        out = {}
+        for n in names:
+            try:
+                st = self._path(n).stat()
+                out[n] = f'{st.st_mtime_ns:x}-{st.st_size:x}'
+            except FileNotFoundError:
+                out[n] = '0'
+        return out
+
     def read(self, name: str) -> Any:
         """Kolleksiyaning nusxasi (o‘zgartirish omborga ta’sir qilmaydi)."""
         with self._file_lock(exclusive=False):

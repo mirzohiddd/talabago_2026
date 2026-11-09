@@ -16,7 +16,17 @@ export class ApiError extends Error {
 let onUnauthorized = () => {}
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn }
 
+/** Server sessiyani uzaytirganda (sliding) yangi tugash vaqti — X-Session-Expires sarlavhasida */
+let onSessionExpires = () => {}
+export const setSessionExpiresHandler = (fn) => { onSessionExpires = fn }
+export function readSessionHeader(res) {
+  const v = res?.headers?.get?.('x-session-expires')
+  const ts = v ? Date.parse(v) : NaN
+  if (Number.isFinite(ts)) onSessionExpires(ts)
+}
+
 async function handle(res, path) {
+  readSessionHeader(res)
   const data = res.status === 204 ? null : await res.json().catch(() => null)
   if (res.status === 401 && !path.startsWith('/auth/')) onUnauthorized()
   if (!res.ok) throw new ApiError(res.status, data?.detail || (res.status >= 500 ? 'Server xatosi' : 'So‘rov bajarilmadi'), data)

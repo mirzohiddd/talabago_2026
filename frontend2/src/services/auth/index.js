@@ -5,7 +5,7 @@
  * Har bir /crm/* va /ads endpointi serverda administrator sessiyasini tekshiradi; frontend’dagi tekshiruv faqat UI uchun.
  */
 import { reactive, computed } from 'vue'
-import { API_URL } from '../http'
+import { API_URL, readSessionHeader, setSessionExpiresHandler } from '../http'
 
 export class AuthError extends Error {
   constructor(code, message, extra = {}) { super(message); this.code = code; Object.assign(this, extra) }
@@ -18,6 +18,7 @@ async function req(path, opts = {}) {
   } catch {
     throw new AuthError('network', 'Serverga ulanib bo‘lmadi')
   }
+  readSessionHeader(res)
   const data = res.status === 204 ? null : await res.json().catch(() => null)
   return { res, data }
 }
@@ -44,6 +45,8 @@ export const provider = {
 }
 
 export const auth = reactive({ user: null, expiresAt: 0, ready: false })
+// Har bir javobdagi yangi muddat — faol administrator chiqarib yuborilmaydi
+setSessionExpiresHandler((ts) => { if (auth.user) auth.expiresAt = ts })
 export const isAuthenticated = computed(() => auth.user?.role === 'admin' && auth.expiresAt > Date.now())
 
 function apply(s) {
@@ -67,3 +70,10 @@ export async function logout() {
   apply(null)
 }
 export function dropSession() { apply(null) }
+
+/** Muddat tugadi deb ko‘rinsa — avval serverdan tekshiramiz (sessiya boshqa tabda uzaytirilgan bo‘lishi mumkin) */
+export async function verifySession() {
+  const s = await provider.me()
+  if (s) apply(s)
+  return !!s
+}

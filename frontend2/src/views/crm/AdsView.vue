@@ -1,6 +1,6 @@
 <script setup>
 import { t } from '@/i18n'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Search, Eye, Pencil, Trash2, Megaphone, Radio, MousePointerClick, RotateCcw, Image as ImageIcon, Clapperboard, ChevronUp, ChevronDown } from 'lucide-vue-next'
 import PageHeader from '@/components/crm/PageHeader.vue'
@@ -26,10 +26,7 @@ const router = useRouter()
 const now = useNow()
 const loading = ref(!adsStore.loaded)
 ensureAdsLoaded().then(() => (loading.value = false))
-// Statistika (ko‘rish/bosish) Mini App’dan doimiy keladi — sahifa ochiq turganda har 60 soniyada yangilanadi
-let statsTimer = 0
-onMounted(() => { statsTimer = setInterval(() => { if (document.visibilityState === 'visible') refreshAds().catch(() => {}) }, 60000) })
-onBeforeUnmount(() => clearInterval(statsTimer))
+// Statistika (ko‘rish/bosish) avtomatik yangilanadi: services/live.js reklamalar o‘zgarganini sezsa qayta yuklaydi
 
 const q = ref('')
 const filter = ref('all')

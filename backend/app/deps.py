@@ -1,10 +1,12 @@
 """FastAPI dependency’lari: ombor, joriy foydalanuvchi / administrator, rollar."""
 from __future__ import annotations
 
-from datetime import timedelta
+import time
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from http.cookies import SimpleCookie
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Response
 
 from .config import Settings, get_settings
 from .security import create_token, decode_token
@@ -32,6 +34,36 @@ def platform_settings(store: JsonStore) -> dict:
 def issue_user_token(settings: Settings, user: dict) -> str:
     token, _ = create_token(settings.JWT_SECRET_KEY, user['id'], 'user', timedelta(days=settings.USER_TOKEN_DAYS), role=user['role'])
     return token
+
+
+def _cookie_header(settings: Settings, value: str, max_age: int) -> str:
+    """Admin sessiya cookie’si. Domain qo‘yilmaydi (host-only) — Vercel rewrite orqali panel domenida saqlanadi."""
+    c = SimpleCookie()
+    c[ADMIN_COOKIE] = value
+    m = c[ADMIN_COOKIE]
+    m['path'] = '/'
+    m['max-age'] = max_age
+    m['httponly'] = True
+    m['samesite'] = settings.COOKIE_SAMESITE.capitalize()
+    if settings.cookie_secure:
+        m['secure'] = True
+    if max_age <= 0:
+        m['expires'] = 'Thu, 01 Jan 1970 00:00:00 GMT'
+    out = m.OutputString()
+    # Partitioned (CHIPS): brauzer uchinchi tomon cookie’larini bloklaganda ham (Chrome) shu panel uchun ishlaydi
+    return out + '; Partitioned' if settings.cookie_partitioned and settings.cookie_secure else out
+
+
+def set_admin_cookie(response: Response, token: str, settings: Settings) -> None:
+    response.headers.append('set-cookie', _cookie_header(settings, token, settings.ADMIN_TOKEN_HOURS * 3600))
+
+
+def clear_admin_cookie(response: Response, settings: Settings) -> None:
+    response.headers.append('set-cookie', _cookie_header(settings, '', 0))
+
+
+def issue_admin_token(settings: Settings, admin: dict) -> tuple[str, datetime]:
+    return create_token(settings.JWT_SECRET_KEY, admin['id'], 'admin', timedelta(hours=settings.ADMIN_TOKEN_HOURS), ver=admin.get('tokenVersion', 0))
 
 
 def _bearer(request: Request) -> str | None:
@@ -62,8 +94,9 @@ def require_role(*roles: str):
     return dep
 
 
-def get_admin(request: Request, settings: Settings = Depends(get_settings), store: JsonStore = Depends(get_store)) -> dict:
-    token = request.cookies.get(ADMIN_COOKIE) or _bearer(request)
+def get_admin(request: Request, response: Response, settings: Settings = Depends(get_settings), store: JsonStore = Depends(get_store)) -> dict:
+    from_cookie = request.cookies.get(ADMIN_COOKIE)
+    token = from_cookie or _bearer(request)
     data = decode_token(settings.JWT_SECRET_KEY, token, 'admin') if token else None
     if not data:
         raise HTTPException(401, 'Administrator sifatida kiring')
@@ -73,4 +106,11 @@ def get_admin(request: Request, settings: Settings = Depends(get_settings), stor
     # CSRF: cookie bilan kelgan o‘zgartiruvchi so‘rovlarda maxsus sarlavha majburiy (boshqa saytdan yuborib bo‘lmaydi)
     if request.method in UNSAFE and request.cookies.get(ADMIN_COOKIE) and request.headers.get('x-requested-with') != 'TalabaGo':
         raise HTTPException(403, 'CSRF tekshiruvidan o‘tmadi')
-    return {**admin, 'expiresAt': data['exp']}
+    exp = data['exp']
+    # Sliding sessiya: muddatning yarmi o‘tgan bo‘lsa — yangi cookie (faol ishlayotgan administrator chiqarib yuborilmaydi)
+    if from_cookie and exp - time.time() < settings.ADMIN_TOKEN_HOURS * 1800:
+        token, new_exp = issue_admin_token(settings, admin)
+        set_admin_cookie(response, token, settings)
+        exp = new_exp.timestamp()
+    response.headers['X-Session-Expires'] = datetime.fromtimestamp(exp, timezone.utc).isoformat()
+    return {**admin, 'expiresAt': exp}

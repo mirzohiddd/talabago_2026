@@ -3,7 +3,8 @@ Boshqaruv buyruqlari:
   python -m app.cli secret                      — JWT_SECRET_KEY uchun tasodifiy qiymat
   python -m app.cli hash-password               — parol xeshi (ADMIN_PASSWORD_HASH uchun)
   python -m app.cli create-admin --username X   — administrator qo‘shish (parol so‘raladi)
-  python -m app.cli set-admin-password --username X
+  python -m app.cli set-admin-password --username X   — parolni almashtirish (parol so‘raladi; barcha sessiyalar bekor)
+  python -m app.cli admin-status                — administratorlar ro‘yxati va muhit sozlamalari tekshiruvi (xesh/parol chiqmaydi)
   python -m app.cli backup                      — barcha JSON’larning to‘liq nusxasi
   python -m app.cli setup-bot                   — bot menyusi (Mini App tugmasi) va buyruqlari
   python -m app.cli set-webhook                 — Telegram webhook’ni API_PUBLIC_URL ga o‘rnatish
@@ -55,7 +56,7 @@ def set_env(pairs: list[str]) -> None:
 
 def main() -> None:
     p = argparse.ArgumentParser(prog='python -m app.cli')
-    p.add_argument('cmd', choices=['secret', 'hash-password', 'create-admin', 'set-admin-password', 'backup', 'setup-bot', 'set-webhook', 'bot-check', 'set-env'])
+    p.add_argument('cmd', choices=['secret', 'hash-password', 'create-admin', 'set-admin-password', 'admin-status', 'backup', 'setup-bot', 'set-webhook', 'bot-check', 'set-env'])
     p.add_argument('--username')
     p.add_argument('pairs', nargs='*', help='set-env uchun KEY=VALUE')
     a = p.parse_args()
@@ -87,6 +88,16 @@ def main() -> None:
                 ex['passwordHash'] = hash_password(pw)
                 ex['tokenVersion'] = ex.get('tokenVersion', 0) + 1
         print('Tayyor')
+    elif a.cmd == 'admin-status':
+        import hashlib
+        fp = hashlib.sha256(s.ADMIN_PASSWORD_HASH.encode()).hexdigest()[:16] if s.ADMIN_PASSWORD_HASH else None
+        print(f'ADMIN_USERNAME: {s.ADMIN_USERNAME or "(bo‘sh)"}')
+        print(f'ADMIN_PASSWORD_HASH: {"to‘g‘ri formatda (scrypt$)" if s.ADMIN_PASSWORD_HASH.startswith("scrypt$") else "YO‘Q yoki noto‘g‘ri"}')
+        print(f'COOKIE_SAMESITE={s.COOKIE_SAMESITE} · Secure={s.cookie_secure} · Partitioned={s.cookie_partitioned} · ADMIN_TOKEN_HOURS={s.ADMIN_TOKEN_HOURS}')
+        print(f'DATA_DIR: {s.DATA_DIR}')
+        for x in store.read('admins'):
+            applied = 'ha' if fp and x.get('envHashApplied') == fp else 'yo‘q'
+            print(f'  - {x["username"]} · {x.get("status", "active")} · id={x["id"]} · muhit xeshi qo‘llangan: {applied} · oxirgi kirish: {x.get("lastLoginAt") or "—"}')
     elif a.cmd == 'backup':
         print(store.snapshot())
     elif a.cmd == 'bot-check':

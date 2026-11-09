@@ -9,9 +9,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Users, Briefcase, Building2, Megaphone, MessageSquareWarning, Settings, LogOut, Menu, X, Clock, GraduationCap, Inbox, LifeBuoy, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import AppLogo from '@/components/brand/AppLogo.vue'
 import Avatar from '@/components/ui/Avatar.vue'
-import { auth, logout } from '@/services/auth'
-import { crmStore, ensureCrmLoaded, refreshCrm } from '@/services/crm'
-import { refreshAds } from '@/services/ads'
+import { auth, logout, verifySession } from '@/services/auth'
+import { crmStore, ensureCrmLoaded } from '@/services/crm'
+import { startLive, stopLive } from '@/services/live'
 import { useNow } from '@/composables/useNow'
 import { formatTashkent } from '@/utils/tashkentTime'
 import { toast } from '@/stores/toast'
@@ -48,13 +48,23 @@ async function doLogout(reason) {
   if (!reason) toast(t('Tizimdan chiqdingiz'))
 }
 let timer = null
-// Yangi murojaatlar, e’lonlar va shikoyatlar: har 30 soniyada serverdan yangilanadi (sahifa ko‘rinib turganda)
-let poll = null
+let checking = false
+// Muddat tugaganga o‘xshasa — serverdan tekshiriladi (sliding sessiya / boshqa tab); faqat server rad etsa chiqariladi
+async function checkExpiry() {
+  if (checking || !auth.expiresAt || auth.expiresAt > Date.now()) return
+  checking = true
+  try {
+    if (!(await verifySession())) doLogout('expired')
+  } finally {
+    checking = false
+  }
+}
+// Barcha sahifalar (Dashboard, foydalanuvchilar, e’lonlar, reklama, support, ...) avtomatik yangilanadi — services/live.js
 onMounted(() => {
-  timer = setInterval(() => { if (auth.expiresAt && auth.expiresAt <= Date.now()) doLogout('expired') }, 15000)
-  poll = setInterval(() => { if (document.visibilityState === 'visible' && crmStore.loaded) refreshCrm() }, 30000)
+  timer = setInterval(checkExpiry, 15000)
+  startLive()
 })
-onBeforeUnmount(() => { clearInterval(timer); clearInterval(poll) })
+onBeforeUnmount(() => { clearInterval(timer); stopLive() })
 watch(() => route.path, () => (drawer.value = false))
 </script>
 
