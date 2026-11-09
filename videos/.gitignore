@@ -1,0 +1,5 @@
+.env
+voiceover/cache/
+source/frames/
+source/data.js
+source/subs.js

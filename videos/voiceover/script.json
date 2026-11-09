@@ -1,0 +1,20 @@
+{
+  "voice_id": "agoC45V78njTIxYzwmSb",
+  "language": "uz",
+  "note": "text — subtitr (ekranda), voice — ElevenLabs uchun o‘qiladigan matn (talaffuz uchun moslangan). start/end — soniya.",
+  "lines": [
+    {"start": 0.4,  "end": 4.8,  "text": "Talabamisiz? Ish, turar joy va bepul kurslar — endi bir joyda!", "voice": "Talabamisiz? Ish, turar joy va bepul kurslar — endi bir joyda!"},
+    {"start": 5.2,  "end": 9.6,  "text": "Telegram’da TalabaGo botini oching va bir bosishda ilovaga kiring.", "voice": "Telegramda TalabaGo botini oching va bir bosishda ilovaga kiring."},
+    {"start": 9.9,  "end": 14.7, "text": "Talaba sifatida ro‘yxatdan o‘tish bir daqiqa ham olmaydi.", "voice": "Talaba sifatida ro‘yxatdan o‘tish bir daqiqa ham olmaydi."},
+    {"start": 15.3, "end": 21.9, "text": "“Ishlar” bo‘limida o‘qishingizga mos ishni toping: soatlik, kunlik yoki doimiy.", "voice": "Ishlar bo‘limida o‘qishingizga mos ishni toping: soatlik, kunlik yoki doimiy."},
+    {"start": 22.2, "end": 29.6, "text": "Filtrlang, e’lonni oching va arizani bir zumda yuboring.", "voice": "Filtrlang, e’lonni oching va arizani bir zumda yuboring."},
+    {"start": 30.3, "end": 36.3, "text": "“Turar joy” bo‘limida talabalarga mos uy va xonalarni ko‘ring.", "voice": "Turar joy bo‘limida talabalarga mos uy va xonalarni ko‘ring."},
+    {"start": 36.6, "end": 42.6, "text": "Rasmlar, narx va qulayliklarni ko‘rib, ijara so‘rovini yuboring.", "voice": "Rasmlar, narx va qulayliklarni ko‘rib, ijara so‘rovini yuboring."},
+    {"start": 43.3, "end": 48.9, "text": "“Kurslar” bo‘limida rus va ingliz tilini bepul o‘rganing.", "voice": "Kurslar bo‘limida rus va ingliz tilini bepul o‘rganing."},
+    {"start": 49.2, "end": 54.6, "text": "Video, lug‘at va test — har bir dars progressingizga qo‘shiladi.", "voice": "Video, lug‘at va test — har bir dars progressingizga qo‘shiladi."},
+    {"start": 55.3, "end": 59.9, "text": "“Arizalarim” bo‘limida barcha arizalaringiz holatini kuzating.", "voice": "Arizalarim bo‘limida barcha arizalaringiz holatini kuzating."},
+    {"start": 60.2, "end": 64.6, "text": "Suhbatga taklif yoki javob kelsa — darhol bilasiz.", "voice": "Suhbatga taklif yoki javob kelsa — darhol bilasiz."},
+    {"start": 65.5, "end": 69.8, "text": "TalabaGo — talabalar uchun imkoniyatlar platformasi.", "voice": "TalabaGo — talabalar uchun imkoniyatlar platformasi."},
+    {"start": 70.1, "end": 74.6, "text": "Telegram’da @talaba_2026_go_bot ni oching — hoziroq boshlang!", "voice": "Telegramda talaba ikki ming yigirma olti go botni oching — hoziroq boshlang!"}
+  ]
+}

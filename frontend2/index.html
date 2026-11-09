@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light" />
+    <!-- JS yuklanguncha ham oq fon va yuklanish belgisi (Telegram Desktop qorong‘i mavzusida qora ekran bo‘lmasin) -->
+    <style>
+      html, body { margin: 0; background: #ffffff; color: #111111; }
+      #boot { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+        padding: 24px; text-align: center; background: #ffffff; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      #boot .sp { width: 38px; height: 38px; border-radius: 50%; border: 3px solid #D1FAE5; border-top-color: #10B981; animation: boot-spin .8s linear infinite; }
+      #boot b { font-size: 17px; }
+      #boot span { color: #6b6b70; max-width: 290px; }
+      #boot button { margin-top: 6px; border: 0; border-radius: 14px; padding: 12px 22px; background: #10B981; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+    </style>
+    <title>TalabaGo Support</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Shrift sahifa chizilishini to‘xtatmaydi (sekin tarmoqda bo‘sh ekran bo‘lmasin) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  </head>
+  <body>
+    <div id="app"><div id="boot" role="status" aria-label="Yuklanmoqda"><div class="sp"></div></div></div>
+    <script>
+      // 20 soniyada ilova ishga tushmasa (tarmoq juda sekin yoki eski brauzer) — bo‘sh ekran o‘rniga tushuntirish va qayta yuklash tugmasi
+      setTimeout(function () {
+        if (window.__talabagoBooted) return
+        var b = document.getElementById('boot')
+        if (b) b.innerHTML = '<b>Ilova yuklanmadi</b><span>Internet aloqasini tekshiring va qayta urinib ko‘ring. Muammo takrorlansa, Telegram ilovasini yangilang.</span><button type="button" onclick="location.reload()">Qayta yuklash</button>'
+      }, 20000)
+    </script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

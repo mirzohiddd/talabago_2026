@@ -1,0 +1,1104 @@
+[
+ {
+  "id": "c-ru",
+  "key": "ru",
+  "title": "Rus tili",
+  "subtitle": "Kundalik muloqot va ish uchun",
+  "level": "A1–A2",
+  "status": "published",
+  "free": true,
+  "description": "Talabalar uchun amaliy rus tili: salomlashish, tanishuv, raqamlar, universitet va ish suhbati.",
+  "lessons": [
+   {
+    "id": "ru-1",
+    "order": 1,
+    "title": "Salomlashish",
+    "summary": "Здравствуйте, привет va xayrlashish iboralari",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/ru-1.mp4",
+     "poster": "/media/courses/ru-1.webp"
+    },
+    "text": "Rus tilida rasmiy va norasmiy salomlashish farqlanadi. Notanish odamga, o‘qituvchiga yoki ish beruvchiga «Здравствуйте» deyiladi. Do‘stlar orasida esa «Привет» ishlatiladi.\n\nXayrlashishda rasmiy «До свидания», norasmiy «Пока» ishlatiladi. Kunning vaqtiga qarab «Доброе утро», «Добрый день», «Добрый вечер» deyish mumkin.",
+    "vocab": [
+     {
+      "word": "Здравствуйте",
+      "translation": "Assalomu alaykum (rasmiy)"
+     },
+     {
+      "word": "Привет",
+      "translation": "Salom"
+     },
+     {
+      "word": "Доброе утро",
+      "translation": "Xayrli tong"
+     },
+     {
+      "word": "Добрый день",
+      "translation": "Xayrli kun"
+     },
+     {
+      "word": "Добрый вечер",
+      "translation": "Xayrli kech"
+     },
+     {
+      "word": "До свидания",
+      "translation": "Xayr (rasmiy)"
+     },
+     {
+      "word": "Пока",
+      "translation": "Xayr"
+     },
+     {
+      "word": "Спасибо",
+      "translation": "Rahmat"
+     }
+    ],
+    "translations": [
+     {
+      "source": "Здравствуйте, как дела?",
+      "target": "Assalomu alaykum, ishlaringiz qalay?"
+     },
+     {
+      "source": "Привет! Всё хорошо.",
+      "target": "Salom! Hammasi yaxshi."
+     },
+     {
+      "source": "Спасибо, до свидания!",
+      "target": "Rahmat, xayr!"
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«Здравствуйте» qachon ishlatiladi?",
+      "options": [
+       "Faqat do‘stlarga",
+       "Rasmiy vaziyatda",
+       "Faqat kechqurun",
+       "Xayrlashganda"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Xayrli tong» rus tilida qanday?",
+      "options": [
+       "Добрый вечер",
+       "Доброе утро",
+       "Добрый день",
+       "Пока"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Пока» so‘zining ma’nosi?",
+      "options": [
+       "Rahmat",
+       "Salom",
+       "Xayr",
+       "Kechirasiz"
+      ],
+      "answer": 2
+     },
+     {
+      "q": "Ish beruvchi bilan xayrlashish:",
+      "options": [
+       "Пока",
+       "Привет",
+       "До свидания",
+       "Спасибо"
+      ],
+      "answer": 2
+     },
+     {
+      "q": "«Спасибо» — bu…",
+      "options": [
+       "Rahmat",
+       "Iltimos",
+       "Ha",
+       "Yo‘q"
+      ],
+      "answer": 0
+     }
+    ]
+   },
+   {
+    "id": "ru-2",
+    "order": 2,
+    "title": "Tanishuv",
+    "summary": "Меня зовут…, Я студент…",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/ru-2.mp4",
+     "poster": "/media/courses/ru-2.webp"
+    },
+    "text": "O‘zingizni tanishtirish uchun «Меня зовут…» (Mening ismim…) iborasi ishlatiladi. Kasbingiz yoki o‘qishingiz haqida «Я студент» (yigitlar) yoki «Я студентка» (qizlar) deysiz.\n\nSuhbatdoshning ismini so‘rash: rasmiy — «Как вас зовут?», norasmiy — «Как тебя зовут?». Tanishganingizdan xursand ekaningizni «Очень приятно» bilan bildirasiz.",
+    "vocab": [
+     {
+      "word": "Меня зовут…",
+      "translation": "Mening ismim…"
+     },
+     {
+      "word": "Как вас зовут?",
+      "translation": "Ismingiz nima?"
+     },
+     {
+      "word": "Я студент",
+      "translation": "Men talabaman (yigit)"
+     },
+     {
+      "word": "Я студентка",
+      "translation": "Men talabaman (qiz)"
+     },
+     {
+      "word": "Очень приятно",
+      "translation": "Tanishganimdan xursandman"
+     },
+     {
+      "word": "Я из Ташкента",
+      "translation": "Men Toshkentdanman"
+     },
+     {
+      "word": "Мне 19 лет",
+      "translation": "Men 19 yoshdaman"
+     }
+    ],
+    "translations": [
+     {
+      "source": "Меня зовут Азиз, я студент.",
+      "target": "Mening ismim Aziz, men talabaman."
+     },
+     {
+      "source": "Как вас зовут?",
+      "target": "Ismingiz nima?"
+     },
+     {
+      "source": "Очень приятно!",
+      "target": "Tanishganimdan xursandman!"
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«Меня зовут» ma’nosi:",
+      "options": [
+       "Men yashayman",
+       "Mening ismim",
+       "Men o‘qiyman",
+       "Men ishlayman"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "Qiz talaba o‘zini qanday tanishtiradi?",
+      "options": [
+       "Я студент",
+       "Я студентка",
+       "Я учитель",
+       "Я из"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "Rasmiy ravishda ism so‘rash:",
+      "options": [
+       "Как тебя зовут?",
+       "Как вас зовут?",
+       "Кто ты?",
+       "Привет"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Очень приятно» qachon aytiladi?",
+      "options": [
+       "Tanishganda",
+       "Xayrlashganda",
+       "Kechirim so‘raganda",
+       "Ovqatlanganda"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«Я из Ташкента» — …",
+      "options": [
+       "Men Toshkentdaman",
+       "Men Toshkentdanman",
+       "Toshkent katta",
+       "Toshkentga boraman"
+      ],
+      "answer": 1
+     }
+    ]
+   },
+   {
+    "id": "ru-3",
+    "order": 3,
+    "title": "Raqamlar 1–10",
+    "summary": "Raqamlar, narx va telefon raqami",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/ru-3.mp4",
+     "poster": "/media/courses/ru-3.webp"
+    },
+    "text": "Raqamlarni bilish narxni so‘rash, telefon raqamini aytish va vaqt belgilash uchun kerak.\n\n1 — один, 2 — два, 3 — три, 4 — четыре, 5 — пять, 6 — шесть, 7 — семь, 8 — восемь, 9 — девять, 10 — десять. Narxni so‘rash: «Сколько стоит?»",
+    "vocab": [
+     {
+      "word": "один",
+      "translation": "bir"
+     },
+     {
+      "word": "два",
+      "translation": "ikki"
+     },
+     {
+      "word": "три",
+      "translation": "uch"
+     },
+     {
+      "word": "пять",
+      "translation": "besh"
+     },
+     {
+      "word": "семь",
+      "translation": "yetti"
+     },
+     {
+      "word": "десять",
+      "translation": "o‘n"
+     },
+     {
+      "word": "Сколько стоит?",
+      "translation": "Qancha turadi?"
+     }
+    ],
+    "translations": [
+     {
+      "source": "Сколько стоит кофе?",
+      "target": "Kofe qancha turadi?"
+     },
+     {
+      "source": "Мой номер: девять, ноль…",
+      "target": "Mening raqamim: to‘qqiz, nol…"
+     },
+     {
+      "source": "У меня два брата.",
+      "target": "Mening ikki akam bor."
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«три» qaysi raqam?",
+      "options": [
+       "2",
+       "3",
+       "4",
+       "8"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«besh» rus tilida:",
+      "options": [
+       "шесть",
+       "пять",
+       "семь",
+       "девять"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Сколько стоит?» ma’nosi:",
+      "options": [
+       "Soat necha?",
+       "Qancha turadi?",
+       "Qayerda?",
+       "Kim?"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«десять» = ?",
+      "options": [
+       "10",
+       "7",
+       "1",
+       "9"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«ikki» rus tilida:",
+      "options": [
+       "один",
+       "два",
+       "три",
+       "восемь"
+      ],
+      "answer": 1
+     }
+    ]
+   },
+   {
+    "id": "ru-4",
+    "order": 4,
+    "title": "Universitetda",
+    "summary": "Dars, imtihon, kutubxona",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/ru-4.mp4",
+     "poster": "/media/courses/ru-4.webp"
+    },
+    "text": "Universitetda eng ko‘p ishlatiladigan so‘zlar: лекция (ma’ruza), семинар, экзамен (imtihon), библиотека (kutubxona), общежитие (yotoqxona).\n\nSavol berish: «Где библиотека?» — Kutubxona qayerda? «Когда экзамен?» — Imtihon qachon?",
+    "vocab": [
+     {
+      "word": "лекция",
+      "translation": "ma’ruza"
+     },
+     {
+      "word": "экзамен",
+      "translation": "imtihon"
+     },
+     {
+      "word": "библиотека",
+      "translation": "kutubxona"
+     },
+     {
+      "word": "общежитие",
+      "translation": "yotoqxona"
+     },
+     {
+      "word": "преподаватель",
+      "translation": "o‘qituvchi"
+     },
+     {
+      "word": "расписание",
+      "translation": "dars jadvali"
+     }
+    ],
+    "translations": [
+     {
+      "source": "Где библиотека?",
+      "target": "Kutubxona qayerda?"
+     },
+     {
+      "source": "Когда экзамен?",
+      "target": "Imtihon qachon?"
+     },
+     {
+      "source": "Я живу в общежитии.",
+      "target": "Men yotoqxonada yashayman."
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«общежитие» — …",
+      "options": [
+       "oshxona",
+       "yotoqxona",
+       "kutubxona",
+       "auditoriya"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«imtihon» rus tilida:",
+      "options": [
+       "лекция",
+       "экзамен",
+       "семинар",
+       "урок"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Где библиотека?» ma’nosi:",
+      "options": [
+       "Kutubxona qachon ochiladi?",
+       "Kutubxona qayerda?",
+       "Kitob qayerda?",
+       "Dars qayerda?"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«преподаватель» — …",
+      "options": [
+       "talaba",
+       "o‘qituvchi",
+       "dekan",
+       "kutubxonachi"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«расписание» — …",
+      "options": [
+       "dars jadvali",
+       "imtihon",
+       "baho",
+       "ta’til"
+      ],
+      "answer": 0
+     }
+    ]
+   },
+   {
+    "id": "ru-5",
+    "order": 5,
+    "title": "Ish suhbati",
+    "summary": "Tajriba, grafik va maosh haqida",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/ru-5.mp4",
+     "poster": "/media/courses/ru-5.webp"
+    },
+    "text": "Ish suhbatida o‘zingiz haqingizda qisqa va aniq gapiring: «У меня есть опыт» (Tajribam bor), «Я могу работать вечером» (Kechqurun ishlay olaman).\n\nGrafik haqida so‘rash: «Какой график работы?» Maosh haqida: «Какая зарплата?»",
+    "vocab": [
+     {
+      "word": "опыт",
+      "translation": "tajriba"
+     },
+     {
+      "word": "график",
+      "translation": "ish grafigi"
+     },
+     {
+      "word": "зарплата",
+      "translation": "maosh"
+     },
+     {
+      "word": "работа",
+      "translation": "ish"
+     },
+     {
+      "word": "собеседование",
+      "translation": "ish suhbati"
+     },
+     {
+      "word": "резюме",
+      "translation": "rezyume (CV)"
+     }
+    ],
+    "translations": [
+     {
+      "source": "У меня есть опыт работы.",
+      "target": "Ish tajribam bor."
+     },
+     {
+      "source": "Какой график работы?",
+      "target": "Ish grafigi qanday?"
+     },
+     {
+      "source": "Я могу работать по вечерам.",
+      "target": "Kechqurunlari ishlay olaman."
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«зарплата» — …",
+      "options": [
+       "ish",
+       "maosh",
+       "grafik",
+       "tajriba"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Ish grafigi qanday?» rus tilida:",
+      "options": [
+       "Какая зарплата?",
+       "Какой график работы?",
+       "Где работа?",
+       "Кто вы?"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«собеседование» — …",
+      "options": [
+       "ish suhbati",
+       "majlis",
+       "imtihon",
+       "shartnoma"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«опыт» — …",
+      "options": [
+       "tajriba",
+       "bilim",
+       "maosh",
+       "ish joyi"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«резюме» nima?",
+      "options": [
+       "Maosh",
+       "CV",
+       "Ish joyi",
+       "Grafik"
+      ],
+      "answer": 1
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "c-en",
+  "key": "en",
+  "title": "Ingliz tili",
+  "subtitle": "Boshlang‘ich daraja, amaliy iboralar",
+  "level": "A1–A2",
+  "status": "published",
+  "free": true,
+  "description": "Ingliz tilida salomlashish, o‘zingizni tanishtirish, raqamlar, universitet va ish suhbati iboralari.",
+  "lessons": [
+   {
+    "id": "en-1",
+    "order": 1,
+    "title": "Greetings",
+    "summary": "Hello, good morning va xayrlashish",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/en-1.mp4",
+     "poster": "/media/courses/en-1.webp"
+    },
+    "text": "Ingliz tilida eng keng tarqalgan salomlashish — «Hello». Do‘stlar orasida «Hi» deyiladi. Kunning vaqtiga qarab «Good morning», «Good afternoon», «Good evening» ishlatiladi.\n\nXayrlashish: «Goodbye», norasmiy — «Bye» yoki «See you».",
+    "vocab": [
+     {
+      "word": "Hello",
+      "translation": "Salom"
+     },
+     {
+      "word": "Hi",
+      "translation": "Salom (norasmiy)"
+     },
+     {
+      "word": "Good morning",
+      "translation": "Xayrli tong"
+     },
+     {
+      "word": "Good afternoon",
+      "translation": "Xayrli kun"
+     },
+     {
+      "word": "Good evening",
+      "translation": "Xayrli kech"
+     },
+     {
+      "word": "Goodbye",
+      "translation": "Xayr"
+     },
+     {
+      "word": "See you",
+      "translation": "Ko‘rishguncha"
+     },
+     {
+      "word": "Thank you",
+      "translation": "Rahmat"
+     }
+    ],
+    "translations": [
+     {
+      "source": "Hello, how are you?",
+      "target": "Salom, qalaysiz?"
+     },
+     {
+      "source": "I am fine, thank you.",
+      "target": "Yaxshiman, rahmat."
+     },
+     {
+      "source": "See you tomorrow!",
+      "target": "Ertaga ko‘rishguncha!"
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«Good evening» qachon aytiladi?",
+      "options": [
+       "Ertalab",
+       "Kunduzi",
+       "Kechqurun",
+       "Tunda"
+      ],
+      "answer": 2
+     },
+     {
+      "q": "«Rahmat» ingliz tilida:",
+      "options": [
+       "Please",
+       "Thank you",
+       "Sorry",
+       "Hello"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«See you» ma’nosi:",
+      "options": [
+       "Ko‘rishguncha",
+       "Kechirasiz",
+       "Marhamat",
+       "Salom"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "Norasmiy salom:",
+      "options": [
+       "Goodbye",
+       "Hi",
+       "Good evening",
+       "Thanks"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Xayrli tong»:",
+      "options": [
+       "Good night",
+       "Good morning",
+       "Good day",
+       "Good evening"
+      ],
+      "answer": 1
+     }
+    ]
+   },
+   {
+    "id": "en-2",
+    "order": 2,
+    "title": "About me",
+    "summary": "My name is…, I am a student",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/en-2.mp4",
+     "poster": "/media/courses/en-2.webp"
+    },
+    "text": "O‘zingizni tanishtirish: «My name is…» yoki «I am…». Talaba ekaningizni «I am a student» bilan aytasiz. Qayerdan ekaningizni «I am from Uzbekistan» deb bildirasiz.\n\nSuhbatdoshning ismini so‘rash: «What is your name?» Javobdan keyin «Nice to meet you» deyiladi.",
+    "vocab": [
+     {
+      "word": "My name is…",
+      "translation": "Mening ismim…"
+     },
+     {
+      "word": "What is your name?",
+      "translation": "Ismingiz nima?"
+     },
+     {
+      "word": "I am a student",
+      "translation": "Men talabaman"
+     },
+     {
+      "word": "I am from…",
+      "translation": "Men …danman"
+     },
+     {
+      "word": "Nice to meet you",
+      "translation": "Tanishganimdan xursandman"
+     },
+     {
+      "word": "I am 19 years old",
+      "translation": "Men 19 yoshdaman"
+     }
+    ],
+    "translations": [
+     {
+      "source": "My name is Madina.",
+      "target": "Mening ismim Madina."
+     },
+     {
+      "source": "I study at TATU.",
+      "target": "Men TATUda o‘qiyman."
+     },
+     {
+      "source": "Nice to meet you!",
+      "target": "Tanishganimdan xursandman!"
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«What is your name?» ma’nosi:",
+      "options": [
+       "Qayerdansiz?",
+       "Ismingiz nima?",
+       "Necha yoshdasiz?",
+       "Qalaysiz?"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Men talabaman»:",
+      "options": [
+       "I am a teacher",
+       "I am a student",
+       "I study",
+       "I am fine"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Nice to meet you» qachon aytiladi?",
+      "options": [
+       "Tanishganda",
+       "Xayrlashganda",
+       "Kechirim so‘raganda",
+       "Rahmat aytganda"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«I am from Uzbekistan» —",
+      "options": [
+       "Men O‘zbekistondaman",
+       "Men O‘zbekistondanman",
+       "O‘zbekiston go‘zal",
+       "O‘zbekistonga boraman"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Mening ismim…»:",
+      "options": [
+       "I am from…",
+       "My name is…",
+       "I have…",
+       "I like…"
+      ],
+      "answer": 1
+     }
+    ]
+   },
+   {
+    "id": "en-3",
+    "order": 3,
+    "title": "Numbers",
+    "summary": "Raqamlar, narx va telefon",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/en-3.mp4",
+     "poster": "/media/courses/en-3.webp"
+    },
+    "text": "Raqamlar: one, two, three, four, five, six, seven, eight, nine, ten. Narxni so‘rash: «How much is it?» Telefon raqamini so‘rash: «What is your phone number?»",
+    "vocab": [
+     {
+      "word": "one",
+      "translation": "bir"
+     },
+     {
+      "word": "two",
+      "translation": "ikki"
+     },
+     {
+      "word": "three",
+      "translation": "uch"
+     },
+     {
+      "word": "five",
+      "translation": "besh"
+     },
+     {
+      "word": "seven",
+      "translation": "yetti"
+     },
+     {
+      "word": "ten",
+      "translation": "o‘n"
+     },
+     {
+      "word": "How much is it?",
+      "translation": "Bu qancha turadi?"
+     }
+    ],
+    "translations": [
+     {
+      "source": "How much is this book?",
+      "target": "Bu kitob qancha turadi?"
+     },
+     {
+      "source": "My number is nine-nine-eight…",
+      "target": "Mening raqamim to‘qqiz-to‘qqiz-sakkiz…"
+     },
+     {
+      "source": "I have two sisters.",
+      "target": "Mening ikkita singlim bor."
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«three» = ?",
+      "options": [
+       "2",
+       "3",
+       "8",
+       "13"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«besh» ingliz tilida:",
+      "options": [
+       "four",
+       "five",
+       "six",
+       "nine"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«How much is it?» ma’nosi:",
+      "options": [
+       "Soat necha?",
+       "Bu qancha turadi?",
+       "Bu nima?",
+       "Qayerda?"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«ten» = ?",
+      "options": [
+       "10",
+       "1",
+       "7",
+       "2"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«yetti» ingliz tilida:",
+      "options": [
+       "six",
+       "seven",
+       "eleven",
+       "eight"
+      ],
+      "answer": 1
+     }
+    ]
+   },
+   {
+    "id": "en-4",
+    "order": 4,
+    "title": "At university",
+    "summary": "Lecture, exam, library",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/en-4.mp4",
+     "poster": "/media/courses/en-4.webp"
+    },
+    "text": "Universitetda kerakli so‘zlar: lecture (ma’ruza), exam (imtihon), library (kutubxona), dormitory (yotoqxona), teacher (o‘qituvchi), schedule (jadval).\n\nSavollar: «Where is the library?», «When is the exam?»",
+    "vocab": [
+     {
+      "word": "lecture",
+      "translation": "ma’ruza"
+     },
+     {
+      "word": "exam",
+      "translation": "imtihon"
+     },
+     {
+      "word": "library",
+      "translation": "kutubxona"
+     },
+     {
+      "word": "dormitory",
+      "translation": "yotoqxona"
+     },
+     {
+      "word": "teacher",
+      "translation": "o‘qituvchi"
+     },
+     {
+      "word": "schedule",
+      "translation": "jadval"
+     }
+    ],
+    "translations": [
+     {
+      "source": "Where is the library?",
+      "target": "Kutubxona qayerda?"
+     },
+     {
+      "source": "When is the exam?",
+      "target": "Imtihon qachon?"
+     },
+     {
+      "source": "I live in a dormitory.",
+      "target": "Men yotoqxonada yashayman."
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«library» — …",
+      "options": [
+       "laboratoriya",
+       "kutubxona",
+       "ma’ruza",
+       "oshxona"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«imtihon» ingliz tilida:",
+      "options": [
+       "lesson",
+       "exam",
+       "lecture",
+       "test"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«Where is the library?» —",
+      "options": [
+       "Kutubxona qayerda?",
+       "Kutubxona qachon?",
+       "Kitob qayerda?",
+       "Bu kutubxonami?"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«dormitory» — …",
+      "options": [
+       "yotoqxona",
+       "auditoriya",
+       "kafedra",
+       "dekanat"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«schedule» — …",
+      "options": [
+       "jadval",
+       "baho",
+       "kurs",
+       "ta’til"
+      ],
+      "answer": 0
+     }
+    ]
+   },
+   {
+    "id": "en-5",
+    "order": 5,
+    "title": "Job interview",
+    "summary": "Experience, schedule, salary",
+    "status": "published",
+    "durationMin": 12,
+    "video": {
+     "url": "/media/courses/en-5.mp4",
+     "poster": "/media/courses/en-5.webp"
+    },
+    "text": "Ish suhbatida: «I have experience in…» (…da tajribam bor), «I can work in the evenings» (kechqurunlari ishlay olaman). Savollar: «What are the working hours?», «What is the salary?»",
+    "vocab": [
+     {
+      "word": "experience",
+      "translation": "tajriba"
+     },
+     {
+      "word": "salary",
+      "translation": "maosh"
+     },
+     {
+      "word": "working hours",
+      "translation": "ish vaqti"
+     },
+     {
+      "word": "interview",
+      "translation": "suhbat"
+     },
+     {
+      "word": "part-time",
+      "translation": "yarim stavka"
+     },
+     {
+      "word": "resume / CV",
+      "translation": "rezyume"
+     }
+    ],
+    "translations": [
+     {
+      "source": "I have experience in sales.",
+      "target": "Savdoda tajribam bor."
+     },
+     {
+      "source": "What are the working hours?",
+      "target": "Ish vaqti qanday?"
+     },
+     {
+      "source": "I can start next week.",
+      "target": "Keyingi haftadan boshlay olaman."
+     }
+    ],
+    "quiz": [
+     {
+      "q": "«salary» — …",
+      "options": [
+       "maosh",
+       "tajriba",
+       "ish vaqti",
+       "shartnoma"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«Ish vaqti qanday?»:",
+      "options": [
+       "What is the salary?",
+       "What are the working hours?",
+       "Where do you work?",
+       "Who are you?"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«part-time» — …",
+      "options": [
+       "to‘liq stavka",
+       "yarim stavka",
+       "tungi smena",
+       "ta’til"
+      ],
+      "answer": 1
+     },
+     {
+      "q": "«experience» — …",
+      "options": [
+       "tajriba",
+       "imtihon",
+       "bilim",
+       "ish joyi"
+      ],
+      "answer": 0
+     },
+     {
+      "q": "«interview» — …",
+      "options": [
+       "suhbat",
+       "kurs",
+       "maosh",
+       "xodim"
+      ],
+      "answer": 0
+     }
+    ]
+   }
+  ]
+ }
+]

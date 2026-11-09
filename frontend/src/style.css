@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/* ============ TalabaGo dizayn tizimi ============ */
+@theme {
+  --font-sans: "Inter", "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  /* TalabaGo yashil palitrasi (emerald). Fon/to‘ldirish: brand; matn va ikonka: brand-600 / 700 */
+  --color-brand: #10B981;
+  --color-brand-25: #F6FEFB;
+  --color-brand-50: #ECFDF5;
+  --color-brand-100: #D1FAE5;
+  --color-brand-200: #A7F3D0;
+  --color-brand-300: #6EE7B7;
+  --color-brand-400: #34D399;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065F46;
+
+  --color-ink: #111111;
+  --color-ink-2: #3a3a3c;
+  --color-muted: #8a8a8e;
+  --color-line: #ececef;
+  --color-surface: #f5f5f7;
+  --color-paper: #ffffff;
+
+  --color-success: #059669;
+  --color-warning: #f59e0b;
+  --color-danger: #e5484d;
+
+  --radius-xl2: 1.25rem;
+  --shadow-card: 0 1px 2px rgba(17, 17, 17, 0.04), 0 4px 18px rgba(17, 17, 17, 0.045);
+  --shadow-lift: 0 2px 6px rgba(17, 17, 17, 0.05), 0 16px 32px -6px rgba(6, 95, 70, 0.14);
+  --shadow-brand: 0 8px 20px -6px rgba(16, 185, 129, 0.55);
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-float: float 5s ease-in-out infinite;
+  --animate-hat: hat-tip 3.2s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-wiggle: wiggle 0.6s ease-in-out;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-6px) rotate(-1deg); }
+  }
+  @keyframes hat-tip {
+    0%, 70%, 100% { transform: rotate(0) translateY(0); }
+    78% { transform: rotate(-8deg) translateY(-3px); }
+    86% { transform: rotate(4deg) translateY(-1px); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-14deg); }
+    50% { transform: rotate(10deg); }
+    75% { transform: rotate(-6deg); }
+  }
+}
+
+@layer base {
+  html, body, #app { height: 100%; }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  button { cursor: pointer; }
+  input, textarea, select { font: inherit; }
+  ::selection { background: var(--color-brand-100); }
+}
+
+@layer components {
+  .card {
+    @apply bg-paper rounded-2xl border border-line;
+    box-shadow: var(--shadow-card);
+    transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s, border-color .25s;
+  }
+  .card-hover:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--color-brand-100); }
+  .card-hover:active { transform: scale(.985); }
+  .page { @apply px-4 pt-3 pb-28 max-w-2xl mx-auto w-full lg:max-w-6xl lg:px-8 lg:pt-6 lg:pb-14; }
+  .page-narrow { @apply px-4 pt-3 pb-28 max-w-2xl mx-auto w-full lg:max-w-3xl lg:px-8 lg:pt-6 lg:pb-14; }
+  .h-title { @apply text-[22px] font-extrabold tracking-tight; }
+  .label { @apply block text-[13px] font-semibold text-ink-2 mb-1.5; }
+  .skeleton {
+    background: linear-gradient(90deg, #f1f1f3 25%, #e7e7ea 37%, #f1f1f3 63%);
+    background-size: 400% 100%;
+    animation: var(--animate-shimmer);
+    @apply rounded-xl;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .stagger > * { animation: var(--animate-fade-up); }
+  .stagger > *:nth-child(1) { animation-delay: .02s }
+  .stagger > *:nth-child(2) { animation-delay: .07s }
+  .stagger > *:nth-child(3) { animation-delay: .12s }
+  .stagger > *:nth-child(4) { animation-delay: .17s }
+  .stagger > *:nth-child(5) { animation-delay: .22s }
+  .stagger > *:nth-child(n+6) { animation-delay: .27s }
+}
+
+:root {
+  /* Telegram (Bot API 8+) o‘z inset’larini CSS o‘zgaruvchilari orqali beradi; brauzerda env() ishlaydi */
+  --safe-top: max(env(safe-area-inset-top, 0px), calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)));
+  --app-height: var(--tg-viewport-stable-height, 100dvh);
+}
+.safe-bottom { padding-bottom: max(var(--safe-bottom), 8px); }
+.safe-top { padding-top: var(--safe-top); }
+html, body { overflow-x: clip; } /* clip: body scroll-konteynerga aylanmaydi (window scroll va scrollBehavior ishlaydi) */
+
+/* ---- Sahifa o'tishlari ---- */
+.page-enter-active, .page-leave-active { transition: opacity .22s ease, transform .28s cubic-bezier(.22,1,.36,1); }
+.page-enter-from { opacity: 0; transform: translateY(10px); }
+.page-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.sheet-enter-active, .sheet-leave-active { transition: transform .32s cubic-bezier(.22,1,.36,1), opacity .25s; }
+.sheet-enter-from, .sheet-leave-to { transform: translateY(100%); opacity: .6; }
+@media (min-width: 640px) { .sheet-enter-from, .sheet-leave-to { transform: translateY(16px) scale(.97); opacity: 0; } }
+.sheet-drawer-enter-active, .sheet-drawer-leave-active { transition: transform .34s cubic-bezier(.22,1,.36,1), opacity .25s; }
+.sheet-drawer-enter-from, .sheet-drawer-leave-to { transform: translateY(100%); opacity: .6; }
+@media (min-width: 1024px) { .sheet-drawer-enter-from, .sheet-drawer-leave-to { transform: translateX(100%); opacity: 1; } }
+
+.pop-enter-active, .pop-leave-active { transition: transform .2s cubic-bezier(.22,1,.36,1), opacity .18s; transform-origin: top right; }
+.pop-enter-from, .pop-leave-to { transform: scale(.92) translateY(-6px); opacity: 0; }
+
+.list-enter-active, .list-leave-active { transition: all .3s cubic-bezier(.22,1,.36,1); }
+.list-enter-from { opacity: 0; transform: translateY(10px); }
+.list-leave-to { opacity: 0; transform: translateX(-20px); }
+
+/* Hand-drawn chizgi animatsiyasi */
+.draw-path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: draw 1.4s ease forwards .2s; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+
+/* ================= Yashil premium sayqal ================= */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+
+/* Tugma ustidan o‘tuvchi yorug‘lik */
+.btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+.btn-shine::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .32) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .8s cubic-bezier(.22, 1, .36, 1);
+}
+.btn-shine:hover::after { transform: translateX(120%); }
+
+/* Brend gradienti — hero, KPI, login paneli */
+.bg-brand-gradient { background: linear-gradient(135deg, #10B981 0%, #059669 55%, #047857 100%); }
+.text-brand-gradient { background: linear-gradient(120deg, #10B981, #047857); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* Yumshoq yashil fon nuqtalari (bo‘sh joylar uchun) */
+.bg-dots { background-image: radial-gradient(rgba(16, 185, 129, .16) 1px, transparent 1px); background-size: 16px 16px; }
+
+/* Kartochka: ko‘tarilish + yashil chegara + chap tomonda nozik chiziq */
+.card-hover { position: relative; }
+.card-hover::before {
+  content: ''; position: absolute; left: -1px; top: 18px; bottom: 18px; width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--color-brand); transform: scaleY(0); transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+.card-hover:hover::before { transform: scaleY(1); }
+
+.skeleton { background: linear-gradient(90deg, #f1f3f2 25%, #e6ebe8 37%, #f1f3f2 63%); background-size: 400% 100%; }

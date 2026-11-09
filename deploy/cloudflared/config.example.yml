@@ -1,0 +1,31 @@
+# Cloudflare Tunnel (doimiy domen) — nusxa oling: cp config.example.yml config.yml
+#   brew install cloudflared
+#   cloudflared tunnel login
+#   cloudflared tunnel create talabago                 # → ~/.cloudflared/<TUNNEL_ID>.json
+#   cloudflared tunnel route dns talabago app.DOMEN.uz
+#   cloudflared tunnel route dns talabago support.DOMEN.uz
+# So‘ng backend/.env: FRONTEND_URL=https://app.DOMEN.uz  SUPPORT_URL=https://support.DOMEN.uz  COOKIE_SECURE=true
+# frontend/.env va frontend2/.env: VITE_ALLOWED_HOSTS=localhost,127.0.0.1,app.DOMEN.uz,support.DOMEN.uz
+tunnel: TUNNEL_ID
+credentials-file: /Users/macbook/.cloudflared/TUNNEL_ID.json
+
+# QUIC (UDP 7844) ko‘p tarmoqlarda (Wi-Fi, provayder, VPN) bloklanadi → “failed to dial to edge with quic: timeout”.
+# HTTP/2 (TCP 443) barqaror ishlaydi.
+protocol: http2
+edge-ip-version: auto
+no-autoupdate: true
+
+ingress:
+  # Mini App: Vite (5173) → /api va /media ni o‘zi FastAPI’ga (8000) uzatadi — bitta host, CORS yo‘q
+  - hostname: app.DOMEN.uz
+    service: http://127.0.0.1:5173
+    originRequest:
+      connectTimeout: 30s
+      noHappyEyeballs: true
+  # TalabaGo Support paneli (5174)
+  - hostname: support.DOMEN.uz
+    service: http://127.0.0.1:5174
+    originRequest:
+      connectTimeout: 30s
+      noHappyEyeballs: true
+  - service: http_status:404

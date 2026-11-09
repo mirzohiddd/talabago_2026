@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<title>TalabaGo Reels compositor</title>
+<style>
+  :root { --g: #10B981; --g6: #059669; --g7: #047857; --ink: #111111; --mint: #ECFDF5; --line: #E7ECEA; }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #fff; font-family: 'Inter', system-ui, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: radial-gradient(120% 70% at 50% 8%, #F3FDF8 0%, #FFFFFF 55%), #fff; }
+  .ring { position: absolute; border-radius: 50%; border-style: solid; border-color: rgba(16,185,129,.10); }
+  .blob { position: absolute; border-radius: 50%; filter: blur(60px); background: rgba(16,185,129,.16); }
+  .dots { position: absolute; width: 220px; height: 220px; background-image: radial-gradient(rgba(16,185,129,.28) 2.6px, transparent 3px); background-size: 26px 26px; }
+
+  /* ---------- intro / outro ---------- */
+  .center { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  #intro { top: 0; bottom: 0; justify-content: center; }
+  #intro .logo { width: 640px; }
+  #intro h1 { font-size: 92px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; margin-top: 70px; }
+  #intro h2 { font-size: 56px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; margin-top: 22px; color: var(--g6); }
+  #outro { top: 0; bottom: 0; justify-content: center; }
+  #outro .mark { width: 230px; }
+  #outro .logo { width: 780px; }
+  #outro p.tag { font-size: 40px; font-weight: 500; color: #3d4643; margin-top: 26px; letter-spacing: -0.01em; }
+  .handle { margin-top: 70px; display: inline-flex; align-items: center; gap: 22px; height: 116px; padding: 0 46px 0 30px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 50px; font-weight: 700; letter-spacing: -0.01em; }
+  .handle .pl { width: 72px; height: 72px; border-radius: 50%; background: var(--g); display: grid; place-items: center; }
+  .cta { margin-top: 42px; height: 132px; padding: 0 70px; border-radius: 999px; background: var(--g); color: #fff; font-size: 62px; font-weight: 800; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 22px; box-shadow: 0 30px 60px -24px rgba(5,150,105,.65); }
+  .hint { margin-top: 30px; font-size: 34px; color: #5b6461; font-weight: 500; }
+
+  /* ---------- sarlavha ---------- */
+  #head { position: absolute; left: 70px; right: 70px; top: 150px; text-align: center; }
+  #head .pill { display: inline-flex; align-items: center; gap: 12px; height: 58px; padding: 0 26px; border-radius: 999px; background: var(--mint); color: var(--g7); font-size: 28px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+  #head .pill b { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--g); color: #fff; font-size: 18px; }
+  #head h3 { margin-top: 18px; font-size: 60px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.06; white-space: pre-line; }
+
+  /* ---------- telefon ---------- */
+  #phone { position: absolute; left: 50%; top: 372px; width: 552px; height: 1157px; margin-left: -276px; border-radius: 86px; background: #0d0f0e; padding: 16px; box-shadow: 0 60px 120px -40px rgba(6,95,70,.45), 0 30px 60px -30px rgba(0,0,0,.35), inset 0 0 0 2px #2b2f2d; }
+  #phone::before { content: ''; position: absolute; inset: 5px; border-radius: 81px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); pointer-events: none; }
+  #screen { position: relative; width: 520px; height: 1125px; border-radius: 70px; overflow: hidden; background: #fff; }
+  #screen img.shot { position: absolute; inset: 0; width: 520px; height: 1125px; object-fit: cover; }
+  #island { position: absolute; top: 14px; left: 50%; width: 150px; height: 40px; margin-left: -75px; border-radius: 22px; background: #0d0f0e; z-index: 9; }
+  .ripple { position: absolute; width: 96px; height: 96px; margin: -48px 0 0 -48px; border-radius: 50%; z-index: 8; pointer-events: none; }
+  .ripple::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(16,185,129,.30); }
+  .ripple::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 4px solid rgba(5,150,105,.85); }
+
+  /* chat (bot xabari) */
+  #chat { position: absolute; inset: 0; background: #F4F6F5; z-index: 3; display: flex; flex-direction: column; font-size: 21px; }
+  #chat .top { height: 132px; padding: 62px 26px 0; display: flex; align-items: center; gap: 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  #chat .ava { width: 54px; height: 54px; border-radius: 50%; background: #fff; border: 2px solid var(--mint); display: grid; place-items: center; overflow: hidden; }
+  #chat .ava img { width: 40px; }
+  #chat .nm { font-weight: 700; font-size: 23px; } #chat .st { font-size: 17px; color: #7a8380; }
+  #chat .body { flex: 1; padding: 26px 22px; display: flex; flex-direction: column; gap: 16px; }
+  #chat .day { align-self: center; font-size: 16px; color: #6c7572; background: #E6EBE9; border-radius: 999px; padding: 6px 14px; }
+  .bub { max-width: 82%; border-radius: 26px; padding: 16px 20px; line-height: 1.38; box-shadow: 0 2px 0 rgba(0,0,0,.03); }
+  .bub.me { align-self: flex-end; background: var(--g); color: #fff; border-bottom-right-radius: 8px; font-weight: 600; }
+  .bub.bot { align-self: flex-start; background: #fff; border-bottom-left-radius: 8px; }
+  .bub.bot b { font-weight: 700; }
+  .ibtn { align-self: flex-start; width: 82%; height: 66px; border-radius: 18px; background: var(--mint); color: var(--g7); font-weight: 700; font-size: 22px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 2px solid rgba(16,185,129,.35); }
+  .typing { align-self: flex-start; background: #fff; border-radius: 22px; padding: 18px 22px; display: flex; gap: 8px; }
+  .typing i { width: 11px; height: 11px; border-radius: 50%; background: #b4bcb9; display: block; }
+  #chat .bar { height: 118px; background: #fff; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 12px; padding: 0 18px 22px; }
+  #chat .menu { height: 58px; padding: 0 20px; border-radius: 16px; background: var(--g); color: #fff; font-weight: 700; font-size: 20px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #chat .inp { flex: 1; height: 58px; border-radius: 29px; background: #F1F3F2; color: #9aa29f; display: flex; align-items: center; padding: 0 20px; font-size: 19px; }
+
+  /* namunaviy belgi */
+  #badge { position: absolute; left: 50%; top: 1546px; transform: translateX(-50%); height: 50px; padding: 0 22px; border-radius: 999px; background: #fff; border: 1.5px solid var(--line); color: #5b6461; font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; white-space: nowrap; box-shadow: 0 10px 24px -14px rgba(0,0,0,.25); }
+  #badge i { width: 12px; height: 12px; border-radius: 50%; background: #F59E0B; display: block; }
+
+  /* subtitrlar */
+  #sub { position: absolute; left: 60px; right: 60px; top: 1614px; display: flex; justify-content: center; }
+  #sub span { display: inline-block; max-width: 960px; text-align: center; background: rgba(17,17,17,.9); color: #fff; font-size: 40px; font-weight: 600; line-height: 1.28; letter-spacing: -0.01em; padding: 18px 30px; border-radius: 26px; }
+  #sub span em { font-style: normal; color: #6EE7B7; }
+  #progress { position: absolute; left: 0; bottom: 0; height: 8px; background: var(--g); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1" style="width:560px;height:560px;left:-180px;top:-120px"></div>
+  <div class="blob" id="b2" style="width:520px;height:520px;right:-200px;bottom:120px"></div>
+  <div class="ring" id="r1" style="width:760px;height:760px;border-width:80px;right:-380px;top:520px"></div>
+  <div class="ring" id="r2" style="width:420px;height:420px;border-width:46px;left:-230px;top:1180px"></div>
+  <div class="dots" id="d1" style="left:70px;top:430px"></div>
+  <div class="dots" id="d2" style="right:60px;top:1330px"></div>
+
+  <div class="center" id="intro">
+    <img class="logo" src="logo.webp" alt="" />
+    <h1 id="i1">Talabamisiz?</h1>
+    <h2 id="i2">Imkoniyatlar endi bir joyda!</h2>
+  </div>
+
+  <div id="head"><div class="pill" id="pill"><b id="pnum">1</b><span id="ptxt"></span></div><h3 id="htxt"></h3></div>
+
+  <div id="phone">
+    <div id="screen">
+      <img class="shot" id="shotA" alt="" />
+      <img class="shot" id="shotB" alt="" />
+      <div id="chat">
+        <div class="top"><div class="ava"><img src="logo-mark.webp" alt="" /></div><div><div class="nm">TalabaGo</div><div class="st">bot</div></div></div>
+        <div class="body">
+          <div class="day">Bugun</div>
+          <div class="bub me" id="c1">/start</div>
+          <div class="typing" id="c2"><i></i><i></i><i></i></div>
+          <div class="bub bot" id="c3">Assalomu alaykum, <b>Aziz</b>! 👋<br /><br /><b>TalabaGo</b> — talabalar uchun ish, turar joy va bepul rus/ingliz tili kurslari.<br /><br />Ilovani ochish uchun quyidagi tugmani bosing 👇</div>
+          <div class="ibtn" id="c4">🚀 TalabaGo’ni ochish</div>
+        </div>
+        <div class="bar"><div class="menu">🚀 Ilovani ochish</div><div class="inp">Xabar</div></div>
+      </div>
+      <div class="ripple" id="rip" style="display:none"></div>
+    </div>
+  </div>
+
+  <div id="badge"><i></i>Namunaviy e’lonlar — ilova imkoniyatlarini ko‘rsatish uchun</div>
+
+  <div class="center" id="outro">
+    <img class="logo" src="logo.webp" alt="" id="o1" />
+    <p class="tag" id="o2">Talabalar uchun ish, turar joy va bepul kurslar</p>
+    <div class="handle" id="o3"><span class="pl"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></span>@talaba_2026_go_bot</div>
+    <div class="cta" id="o4">Hoziroq boshlang!</div>
+    <p class="hint" id="o5">Telegram’da botni oching va “Start” ni bosing</p>
+  </div>
+
+  <div id="sub"><span id="subtxt"></span></div>
+  <div id="progress"></div>
+</div>
+<script src="data.js"></script>
+<script src="subs.js"></script>
+<script>
+const $ = (id) => document.getElementById(id)
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x))
+const lerp = (a, b, p) => a + (b - a) * p
+const eo = (p) => 1 - Math.pow(1 - clamp(p), 3)                        // easeOutCubic
+const eio = (p) => { p = clamp(p); return p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2 }
+const back = (p) => { p = clamp(p); const c = 1.5; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2) }
+const win = (t, a, b) => clamp((t - a) / (b - a))
+const TOTAL = 75
+const K = 520 / 390   // CSS px → ekran px
+
+/* ---------------- sahnalar (chiqish vaqti) ---------------- */
+const SCENES = [
+  { id: 'register', from: 7.6, to: 15.0, raw: [1.0, 14.3], skip: 'auto' },
+  { id: 'jobs', from: 15.0, to: 30.0, raw: [0.2, 12.8] },
+  { id: 'housing', from: 30.0, to: 43.0, raw: [0.0, 13.6] },
+  { id: 'courses', from: 43.0, to: 55.0, raw: [0.0, 20.0] },
+  { id: 'applications', from: 55.0, to: 65.0, raw: [0.0, 9.6] },
+]
+for (const s of SCENES) {
+  const ev = REC[s.id].events
+  const sf = ev.find((e) => e.kind === 'skip_from'), st = ev.find((e) => e.kind === 'skip_to')
+  s.cut = sf && st ? [sf.t, st.t] : null
+  const eff = (s.raw[1] - s.raw[0]) - (s.cut ? s.cut[1] - s.cut[0] : 0)
+  const target = s.to - s.from
+  s.speed = clamp(eff / target, 0.9, 2.2)
+  s.taps = ev.filter((e) => e.kind === 'tap')
+  s.frames = REC[s.id].frames
+}
+function rawTime(s, t) {             // chiqish vaqti → yozuvdagi vaqt
+  let r = s.raw[0] + (t - s.from) * s.speed
+  if (s.cut && r >= s.cut[0]) r += s.cut[1] - s.cut[0]
+  return Math.min(r, s.raw[1])
+}
+function frameAt(s, r) {
+  const f = s.frames; let lo = 0, hi = f.length - 1
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (f[m].t <= r) lo = m; else hi = m - 1 }
+  return `frames/${s.id}/${f[lo].f}`
+}
+
+const HEADS = [
+  { from: 4.6, to: 15.0, n: 1, pill: 'Telegram Mini App', h: 'Telegram’da oching —\nbir daqiqada ro‘yxatdan o‘ting' },
+  { from: 15.0, to: 30.0, n: 2, pill: 'Ishlar', h: 'O‘qishga mos ish toping\nva ariza yuboring' },
+  { from: 30.0, to: 43.0, n: 3, pill: 'Turar joy', h: 'Qulay uy toping —\nso‘rovni bir bosishda yuboring' },
+  { from: 43.0, to: 55.0, n: 4, pill: 'Kurslar', h: 'Rus va ingliz tili —\nbepul darslar' },
+  { from: 55.0, to: 65.0, n: 5, pill: 'Arizalarim', h: 'Har bir ariza holati\nko‘z oldingizda' },
+]
+window.SUBS = window.SUBS || []
+
+const imgs = [$('shotA'), $('shotB')]
+async function setShot(el, src) {
+  if (el.dataset.src === src) return
+  el.dataset.src = src
+  el.src = src
+  try { await el.decode() } catch (e) {}
+}
+
+async function render(t) {
+  // fon harakati
+  $('b1').style.transform = `translate(${Math.sin(t * .35) * 40}px, ${Math.cos(t * .3) * 30}px)`
+  $('b2').style.transform = `translate(${Math.cos(t * .28) * 50}px, ${Math.sin(t * .33) * 40}px)`
+  $('r1').style.transform = `rotate(${t * 6}deg) scale(${1 + .03 * Math.sin(t * .8)})`
+  $('r2').style.transform = `scale(${1 + .05 * Math.sin(t * .6 + 1)})`
+  $('d1').style.transform = `translateY(${Math.sin(t * .5) * 14}px)`
+  $('d2').style.transform = `translateY(${Math.cos(t * .5) * 14}px)`
+  $('progress').style.width = `${(t / TOTAL) * 100}%`
+
+  // ---------- INTRO 0–5 ----------
+  const intro = $('intro')
+  if (t < 5.4) {
+    intro.style.display = 'flex'
+    const out = eio(win(t, 4.3, 5.1))
+    const lg = intro.querySelector('.logo')
+    const p = back(win(t, 0.15, 1.1))
+    lg.style.opacity = clamp(win(t, 0.1, 0.6)) * (1 - out)
+    lg.style.transform = `translateY(${(1 - p) * 60 - out * 120}px) scale(${lerp(.82, 1, p) * (1 - out * .15)})`
+    const a = eo(win(t, 1.2, 1.9)), b = eo(win(t, 1.9, 2.6))
+    $('i1').style.opacity = a * (1 - out); $('i1').style.transform = `translateY(${(1 - a) * 50 - out * 80}px)`
+    $('i2').style.opacity = b * (1 - out); $('i2').style.transform = `translateY(${(1 - b) * 50 - out * 80}px)`
+  } else intro.style.display = 'none'
+
+  // ---------- telefon (4.4 – 65.8) ----------
+  const ph = $('phone')
+  const pin = eo(win(t, 4.4, 5.3)), pout = eio(win(t, 64.8, 65.7))
+  if (t >= 4.4 && t < 65.8) {
+    ph.style.display = 'block'
+    ph.style.opacity = clamp(pin * 1.4) * (1 - pout)
+    ph.style.transform = `translateY(${(1 - pin) * 520 + pout * 380}px) scale(${lerp(.9, 1, pin) - pout * .08})`
+  } else ph.style.display = 'none'
+
+  // ---------- chat (5 – 7.9) ----------
+  const chat = $('chat')
+  if (t < 7.9) {
+    chat.style.display = 'flex'
+    const show = (id, a, b) => { const p = eo(win(t, a, b)); $(id).style.opacity = p; $(id).style.transform = `translateY(${(1 - p) * 24}px) scale(${lerp(.96, 1, p)})` }
+    show('c1', 5.3, 5.6)
+    const typing = t > 5.75 && t < 6.25
+    $('c2').style.display = typing ? 'flex' : 'none'
+    if (typing) [...$('c2').children].forEach((d, i) => (d.style.transform = `translateY(${Math.sin(t * 14 - i) * 4}px)`))
+    show('c3', 6.25, 6.6); show('c4', 6.45, 6.8)
+    const z = eio(win(t, 7.35, 7.9))
+    chat.style.opacity = 1 - z
+    chat.style.transform = `scale(${1 + z * .08})`
+  } else chat.style.display = 'none'
+
+  // ---------- ekran yozuvlari ----------
+  let cur = null, prev = null, mix = 1
+  for (let i = 0; i < SCENES.length; i++) {
+    const s = SCENES[i]
+    if (t >= s.from && t < s.to + (i === SCENES.length - 1 ? 2 : 0)) { cur = s; if (i > 0 && t < s.from + .4) { prev = SCENES[i - 1]; mix = eio((t - s.from) / .4) } }
+  }
+  if (!cur && t >= 7.0 && t < 7.6) { cur = SCENES[0] }
+  const [A, B] = imgs
+  if (cur) {
+    const tt = Math.max(t, cur.from)
+    await setShot(A, frameAt(cur, rawTime(cur, tt)))
+    A.style.display = 'block'; A.style.opacity = prev ? mix : 1
+    A.style.transform = prev ? `scale(${lerp(1.04, 1, mix)})` : 'none'
+    if (prev) { await setShot(B, frameAt(prev, rawTime(prev, prev.to))); B.style.display = 'block'; B.style.opacity = 1 - mix; A.style.zIndex = 2; B.style.zIndex = 1 }
+    else B.style.display = 'none'
+    // teginish to‘lqini
+    const r = rawTime(cur, tt)
+    const tap = cur.taps.find((e) => r >= e.t - .22 && r <= e.t + .38)
+    const rip = $('rip')
+    if (tap && !(prev && mix < 1)) {
+      const p = clamp((r - (tap.t - .22)) / .6)
+      rip.style.display = 'block'
+      rip.style.left = `${tap.x * K}px`; rip.style.top = `${tap.y * K}px`
+      rip.style.transform = `scale(${lerp(.35, 1.25, eo(p))})`
+      rip.style.opacity = p < .35 ? p / .35 : 1 - (p - .35) / .65
+    } else rip.style.display = 'none'
+  } else { A.style.display = 'none'; B.style.display = 'none'; $('rip').style.display = t > 6.8 && t < 7.5 ? 'block' : 'none' }
+  // chat tugmasini bosish
+  if (!cur && t > 6.8 && t < 7.5) {
+    const p = clamp((t - 6.8) / .6), rip = $('rip')
+    rip.style.left = '214px'; rip.style.top = `${$('c4').offsetTop + 33}px`
+    rip.style.transform = `scale(${lerp(.35, 1.4, eo(p))})`; rip.style.opacity = p < .3 ? p / .3 : 1 - (p - .3) / .7
+  }
+
+  // ---------- sarlavha ----------
+  const hd = HEADS.find((h) => t >= h.from && t < h.to)
+  const head = $('head')
+  if (hd) {
+    if ($('htxt').dataset.k !== hd.pill) { $('htxt').dataset.k = hd.pill; $('htxt').textContent = hd.h; $('ptxt').textContent = hd.pill; $('pnum').textContent = hd.n }
+    const pi = eo(win(t, hd.from + (hd.n === 1 ? .2 : .05), hd.from + .65)), po = eio(win(t, hd.to - .35, hd.to))
+    head.style.opacity = Math.min(pi, 1 - po)
+    head.style.transform = `translateY(${(1 - pi) * 34 - po * 24}px)`
+  } else head.style.opacity = 0
+
+  // ---------- namunaviy e’lonlar belgisi ----------
+  const bd = $('badge')
+  const onB = (t >= 15.4 && t < 43) || (t >= 55.4 && t < 64.8)
+  bd.style.opacity = onB ? 1 : 0
+
+  // ---------- subtitrlar ----------
+  const sb = SUBS.find((x) => t >= x.start && t < x.end)
+  const sub = $('sub'), st = $('subtxt')
+  if (sb) {
+    if (st.dataset.k !== String(sb.start)) { st.dataset.k = sb.start; st.innerHTML = sb.html || sb.text }
+    const a = eo(win(t, sb.start, sb.start + .25)), b = win(t, sb.end - .2, sb.end)
+    sub.style.opacity = a * (1 - b); sub.style.transform = `translateY(${(1 - a) * 16}px)`
+  } else sub.style.opacity = 0
+  // chiqishda subtitr pastga — outro tugmalari bilan to‘qnashmasin
+  sub.style.top = t >= 65 ? '1720px' : '1614px'
+
+  // ---------- OUTRO 65–75 ----------
+  const out = $('outro')
+  if (t >= 65.2) {
+    out.style.display = 'flex'
+    const el = (id, a, d = .6, y = 50) => { const p = eo(win(t, a, a + d)); $(id).style.opacity = p; $(id).style.transform = `translateY(${(1 - p) * y}px)`; return p }
+    const m = back(win(t, 65.4, 66.4)); $('o1').style.opacity = clamp(win(t, 65.4, 65.8)); $('o1').style.transform = `scale(${lerp(.7, 1, m)})`
+    el('o2', 66.3); el('o3', 67.2, .7, 70)
+    const c = el('o4', 68.0, .7, 70)
+    if (t > 69) $('o4').style.transform = `scale(${1 + .035 * Math.sin((t - 69) * 4.2)})`
+    el('o5', 68.8)
+  } else out.style.display = 'none'
+}
+window.render = render
+</script>
+</body>
+</html>

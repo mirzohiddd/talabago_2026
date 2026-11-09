@@ -1,0 +1,51 @@
+1
+00:00:00,400 --> 00:00:04,800
+Talabamisiz? Ish, turar joy va bepul kurslar — endi bir joyda!
+
+2
+00:00:05,200 --> 00:00:09,600
+Telegram’da TalabaGo botini oching va bir bosishda ilovaga kiring.
+
+3
+00:00:09,900 --> 00:00:14,700
+Talaba sifatida ro‘yxatdan o‘tish bir daqiqa ham olmaydi.
+
+4
+00:00:15,300 --> 00:00:21,900
+“Ishlar” bo‘limida o‘qishingizga mos ishni toping: soatlik, kunlik yoki doimiy.
+
+5
+00:00:22,200 --> 00:00:29,600
+Filtrlang, e’lonni oching va arizani bir zumda yuboring.
+
+6
+00:00:30,300 --> 00:00:36,300
+“Turar joy” bo‘limida talabalarga mos uy va xonalarni ko‘ring.
+
+7
+00:00:36,600 --> 00:00:42,600
+Rasmlar, narx va qulayliklarni ko‘rib, ijara so‘rovini yuboring.
+
+8
+00:00:43,300 --> 00:00:48,900
+“Kurslar” bo‘limida rus va ingliz tilini bepul o‘rganing.
+
+9
+00:00:49,200 --> 00:00:54,600
+Video, lug‘at va test — har bir dars progressingizga qo‘shiladi.
+
+10
+00:00:55,300 --> 00:00:59,900
+“Arizalarim” bo‘limida barcha arizalaringiz holatini kuzating.
+
+11
+00:01:00,200 --> 00:01:04,600
+Suhbatga taklif yoki javob kelsa — darhol bilasiz.
+
+12
+00:01:05,500 --> 00:01:09,800
+TalabaGo — talabalar uchun imkoniyatlar platformasi.
+
+13
+00:01:10,100 --> 00:01:14,600
+Telegram’da @talaba_2026_go_bot ni oching — hoziroq boshlang!
