@@ -15,7 +15,7 @@ function act(e) { menu.value = false; emit(e, props.item) }
 <template>
   <article class="card p-4" data-testid="my-listing" :data-status="item.status">
     <div class="flex gap-3">
-      <img v-if="kind === 'house' && cover" :src="cover" alt="" class="size-16 rounded-xl object-cover shrink-0" />
+      <img v-if="kind === 'house' && cover" :src="cover" alt="" loading="lazy" decoding="async" class="size-16 rounded-xl object-cover shrink-0" />
       <span v-else class="size-12 rounded-2xl bg-brand-50 text-brand-600 grid place-items-center shrink-0"><Briefcase class="size-5" /></span>
       <div class="min-w-0 flex-1">
         <div class="flex items-start gap-2">

@@ -4,15 +4,16 @@
  * Majburiy: ism, telefon (+ ish beruvchi uchun kompaniya). Qolganlarini keyin to‘ldirish mumkin.
  */
 import { computed, ref } from 'vue'
-import { User, Phone, Send, Building2, MapPin, GraduationCap, Calendar, Plus, X } from 'lucide-vue-next'
+import { User, Send, Building2, MapPin, GraduationCap, Calendar, Plus, X } from 'lucide-vue-next'
 import BaseInput from '@/components/ui/BaseInput.vue'
+import PhoneInput from '@/components/ui/PhoneInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseTextarea from '@/components/ui/BaseTextarea.vue'
 import { CITIES, CITY_LIST, SHIFTS, UNIVERSITIES, INDUSTRIES, SKILLS, useOptions } from '@/config/roles'
 import { t } from '@/i18n'
 
 const form = defineModel({ type: Object, required: true })
-const props = defineProps({ role: String, errors: { type: Object, default: () => ({}) }, compact: Boolean, sections: { type: Array, default: () => ['personal', 'study', 'skills', 'company', 'location', 'contact'] } })
+const props = defineProps({ role: String, errors: { type: Object, default: () => ({}) }, compact: Boolean, requireLastName: Boolean, sections: { type: Array, default: () => ['personal', 'study', 'skills', 'company', 'location', 'contact'] } })
 
 const cityOpts = useOptions(CITY_LIST)
 const districtOpts = computed(() => (CITIES[form.value.city] || []).map((d) => ({ value: d, label: t(d) })))
@@ -37,9 +38,9 @@ function onCity() { if (!(CITIES[form.value.city] || []).includes(form.value.dis
   <div class="space-y-4">
     <div v-if="has('personal')" class="grid sm:grid-cols-2 gap-4">
       <BaseInput v-model="form.firstName" :label="$t('Ism')" :icon="User" required autocomplete="given-name" :error="errors.firstName" data-testid="f-first" />
-      <BaseInput v-model="form.lastName" :label="$t('Familiya')" autocomplete="family-name" :error="errors.lastName" />
-      <BaseInput v-if="role === 'student'" v-model="form.birthDate" type="date" :label="$t('Tug‘ilgan sana')" :icon="Calendar" max="2012-12-31" />
-      <BaseInput v-model="form.phone" type="tel" inputmode="tel" :label="$t('Telefon')" :icon="Phone" placeholder="+998 90 123 45 67" required autocomplete="tel" :error="errors.phone" data-testid="f-phone" />
+      <BaseInput v-model="form.lastName" :label="$t('Familiya')" :required="requireLastName" autocomplete="family-name" :error="errors.lastName" data-testid="f-last" />
+      <BaseInput v-if="role === 'student'" v-model="form.birthDate" type="date" :label="$t('Tug‘ilgan sana')" :icon="Calendar" max="2012-12-31" :error="errors.birthDate" />
+      <PhoneInput v-model="form.phone" :label="$t('Telefon')" required :error="errors.phone" data-testid="f-phone" />
     </div>
 
     <template v-if="role === 'student' && has('study')">
@@ -66,7 +67,7 @@ function onCity() { if (!(CITIES[form.value.city] || []).includes(form.value.dis
       <BaseSelect v-model="form.district" :label="$t('Tuman')" :options="districtOpts" :placeholder="$t('Tanlang')" />
     </div>
 
-    <BaseInput v-if="has('contact') && !has('personal')" v-model="form.phone" type="tel" inputmode="tel" :label="$t('Telefon')" :icon="Phone" required :error="errors.phone" />
+    <PhoneInput v-if="has('contact') && !has('personal')" v-model="form.phone" :label="$t('Telefon')" required :error="errors.phone" />
     <BaseInput v-if="role !== 'student' && has('contact')" v-model="form.telegram" :label="$t('Telegram')" :icon="Send" placeholder="@username" :error="errors.telegram" autocomplete="off" />
 
     <div v-if="role === 'student' && has('skills')">

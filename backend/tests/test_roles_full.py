@@ -160,7 +160,7 @@ def test_notification_preferences_are_enforced_server_side(client, admin):
     from app.telegram import sign_init_data
     from conftest import BOT
     init = sign_init_data({'id': 55501, 'first_name': 'Pref'}, BOT)
-    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Pref', 'phone': '935550101', 'initData': init})
+    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Pref', 'lastName': 'Karimov', 'phone': '935550101', 'initData': init})
     sh = {'Authorization': f'Bearer {r.json()["token"]}'}
     eh, _, _ = register(client, 'employer')
     job = client.post(API + '/employer/jobs', headers=eh, json=JOB).json()

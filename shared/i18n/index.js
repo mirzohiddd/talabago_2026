@@ -5,8 +5,6 @@
  * Backend ulanganda ham shu lug‘atlar ishlaydi; foydalanuvchi tili PATCH /users/me { language } bilan saqlanadi.
  */
 import { toCyrillic } from './translit.js'
-import ru from './ru.js'
-import en from './en.js'
 
 export const LOCALES = [
   { value: 'uz', label: 'O‘zbekcha', sub: 'Lotin', flag: '🇺🇿', intl: 'uz-Latn-UZ' },
@@ -14,7 +12,13 @@ export const LOCALES = [
   { value: 'ru', label: 'Русский', sub: 'Russian', flag: '🇷🇺', intl: 'ru-RU' },
   { value: 'en', label: 'English', sub: 'Ingliz', flag: '🇬🇧', intl: 'en-GB' },
 ]
-const DICTS = { ru, en }
+// Lug‘atlar faqat kerak bo‘lganda yuklanadi (alohida chunk): o‘zbek tilidagi foydalanuvchi ~110 KB ortiqcha JS yuklamaydi
+const DICTS = {}
+const LOADERS = { ru: () => import('./ru.js'), en: () => import('./en.js') }
+export function loadDict(locale) {
+  if (!LOADERS[locale] || DICTS[locale]) return Promise.resolve()
+  return LOADERS[locale]().then((m) => { DICTS[locale] = m.default }).catch(() => { /* tarmoq xatosi — o‘zbekcha ko‘rsatiladi */ })
+}
 const cyrCache = new Map()
 
 function fill(s, params) {
@@ -46,16 +50,20 @@ export function createI18n({ reactive, storageKey, fallback = 'uz' }) {
   try { initial = localStorage.getItem(storageKey) || fallback } catch {}
   if (!LOCALES.some((l) => l.value === initial)) initial = fallback
   const state = reactive({ locale: initial })
+  /** Boshlang‘ich til lug‘ati yuklanguncha ilova mount qilinmaydi (rus/ingliz foydalanuvchida o‘zbekcha “miltillash” bo‘lmasin) */
+  const ready = loadDict(initial)
 
   const t = (key, params) => translate(state.locale, key, params)
   const tc = (text) => translateContent(state.locale, text)
   const intl = () => LOCALES.find((l) => l.value === state.locale)?.intl || 'uz-Latn-UZ'
 
   function setLocale(v) {
-    if (!LOCALES.some((l) => l.value === v)) return
-    state.locale = v
+    if (!LOCALES.some((l) => l.value === v)) return Promise.resolve()
     try { localStorage.setItem(storageKey, v) } catch {}
-    if (typeof document !== 'undefined') document.documentElement.lang = v === 'uz-Cyrl' ? 'uz-Cyrl' : v
+    return loadDict(v).then(() => {
+      state.locale = v
+      if (typeof document !== 'undefined') document.documentElement.lang = v === 'uz-Cyrl' ? 'uz-Cyrl' : v
+    })
   }
   if (typeof document !== 'undefined') document.documentElement.lang = state.locale
 
@@ -90,7 +98,7 @@ export function createI18n({ reactive, storageKey, fallback = 'uz' }) {
   const dateTime = (iso) => date(iso, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 
   return {
-    state, t, tc, setLocale, ago, date, dateTime, intl,
+    state, t, tc, setLocale, ago, date, dateTime, intl, ready,
     install(app) {
       app.config.globalProperties.$t = t
       app.config.globalProperties.$tc = tc

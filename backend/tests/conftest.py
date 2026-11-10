@@ -64,7 +64,8 @@ _counter = [100]
 
 def register(client, role='student', **extra):
     _counter[0] += 1
-    body = {'role': role, 'firstName': f'Test{_counter[0]}', 'lastName': 'User', 'phone': f'90{_counter[0]:07d}', 'password': 'parol12345', **extra}
+    n = _counter[0]
+    body = {'role': role, 'firstName': 'Test' + chr(97 + n % 26) + chr(97 + n // 26 % 26), 'lastName': 'Foydalanuvchi', 'phone': f'90{n:07d}', 'password': 'parol12345', **extra}
     if role == 'employer':
         body.setdefault('company', 'ACME LLC')
     r = client.post('/api/v1/auth/register', json=body)

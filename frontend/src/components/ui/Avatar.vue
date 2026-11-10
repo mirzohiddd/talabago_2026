@@ -7,7 +7,7 @@ const sz = { lg: 'size-16 text-xl', sm: 'size-8 text-xs', md: 'size-11 text-sm',
 </script>
 <template>
   <span :class="['grid place-items-center rounded-full bg-brand-50 text-brand-700 font-bold shrink-0 overflow-hidden', sz[size]]">
-    <img v-if="url" :src="url" alt="" class="size-full object-cover" />
+    <img v-if="url" :src="url" alt="" loading="lazy" decoding="async" class="size-full object-cover" />
     <template v-else>{{ initials(name) }}</template>
   </span>
 </template>

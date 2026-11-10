@@ -18,7 +18,7 @@ import { ROLES } from '@/config/roles'
 import { session, signIn, toast } from '@/stores/session'
 import { authApi } from '@/services'
 import { getTelegramUser, isTelegram, haptic } from '@/services/telegram'
-import { validate, profileSchema } from '@/utils/validate'
+import { validate, registerSchema, rules, serverFieldErrors } from '@/utils/validate'
 import { normalizePhone } from '@/utils/format'
 
 const router = useRouter()
@@ -73,10 +73,15 @@ const pw = reactive({ password: '', confirm: '' })
 const errors = ref({})
 const loading = ref(false)
 async function submit() {
-  errors.value = validate(form, profileSchema(role.value))
+  errors.value = validate(form, registerSchema(role.value))
   if (!isTelegram) {
-    if (pw.password.length < 8) errors.value.password = t('Kamida {n} ta belgi', { n: 8 })
+    const pe = rules.password(pw.password)
+    if (pe) errors.value.password = pe
     else if (pw.password !== pw.confirm) errors.value.confirm = t('Parollar mos emas')
+  }
+  if (Object.keys(errors.value).length) {
+    // birinchi xato maydoniga o‘tish (mobil ekranda pastda qolib ketmasin)
+    requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
   }
   if (Object.keys(errors.value).length) { haptic.error(); return }
   loading.value = true
@@ -92,7 +97,8 @@ async function submit() {
     toast(t('Xush kelibsiz, {name}!', { name: user.firstName }))
     router.replace(ROLES[role.value].home)
   } catch (e) {
-    if (e.status === 409 && /telefon/i.test(e.message)) errors.value = { ...errors.value, phone: t('Bu telefon raqam bilan hisob mavjud') }
+    if (e.status === 409 && /telefon/i.test(e.message)) errors.value = { ...errors.value, phone: t('Bu telefon raqam bilan hisob mavjud. “Kirish” orqali kiring.') }
+    if (e.status === 422) errors.value = { ...errors.value, ...serverFieldErrors(e) }
     haptic.error()
     toast(e.message || t('Xatolik yuz berdi'), 'error')
   } finally {
@@ -211,7 +217,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
             </div>
             <p v-if="tgUser" class="mt-4 flex gap-2 text-[12.5px] rounded-xl px-3 py-2.5 bg-[#2f6bff]/8 text-[#1f4fc7]"><Send class="size-4 shrink-0 mt-px" />{{ $t('Ism Telegram profilingizdan olindi. Tasdiqlash server tomonida amalga oshiriladi.') }}</p>
             <div class="mt-5">
-              <ProfileFields v-model="form" :role="role" :errors="errors" compact :sections="['personal', 'study', 'company', 'location', 'contact', 'skills']" />
+              <ProfileFields v-model="form" :role="role" :errors="errors" compact require-last-name :sections="['personal', 'study', 'company', 'location', 'contact', 'skills']" />
             </div>
             <!-- Brauzer (website) orqali: telefon + parol bilan keyin qayta kirish uchun. Telegram ichida initData yetarli. -->
             <div v-if="!isTelegram" class="mt-4 grid sm:grid-cols-2 gap-3" data-testid="password-fields">

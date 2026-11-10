@@ -1,8 +1,9 @@
 <script setup>
 /** Uy e’loni formasi (yaratish va tahrirlash). TalabaGo Support tasdig‘idan keyin talabalarga ko‘rinadi. */
 import { reactive, computed, ref } from 'vue'
-import { Home, MapPin, Wallet, BedDouble, Users, Phone, Send } from 'lucide-vue-next'
+import { Home, MapPin, Wallet, BedDouble, Users, Send } from 'lucide-vue-next'
 import BaseInput from '@/components/ui/BaseInput.vue'
+import PhoneInput from '@/components/ui/PhoneInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseTextarea from '@/components/ui/BaseTextarea.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -31,7 +32,7 @@ const errors = ref({})
 function submit() {
   errors.value = validate(form, {
     title: [rules.required, rules.min(4)], district: [rules.required], address: [rules.required], price: [rules.required, rules.positive],
-    rooms: [rules.positive], capacity: [rules.positive], description: [rules.required, rules.min(20)], phone: [rules.required, rules.phone], telegram: [rules.telegram],
+    rooms: [rules.positive], capacity: [rules.positive], description: [rules.required, rules.min(20)], phone: [rules.phoneRequired], telegram: [rules.telegram],
     photos: [(v) => (v.length >= HOUSE_PHOTOS.min ? null : t('Kamida {n} ta rasm yuklang', { n: HOUSE_PHOTOS.min }))],
     freeSpots: [(v, f) => (+v >= 0 && +v <= +f.capacity ? null : t('Bo‘sh joylar umumiy joydan oshmasligi kerak'))],
   })
@@ -80,7 +81,7 @@ function submit() {
       <h3 class="sec">{{ $t('Tavsif va bog‘lanish') }}</h3>
       <BaseTextarea v-model="form.description" :label="$t('Tavsif')" :placeholder="$t('Uy holati, kommunal to‘lovlar, transport, qoidalar...')" :rows="5" :maxlength="1000" required :error="errors.description" data-testid="hf-desc" />
       <div class="grid sm:grid-cols-2 gap-4">
-        <BaseInput v-model="form.phone" type="tel" :label="$t('Telefon')" :icon="Phone" required :error="errors.phone" />
+        <PhoneInput v-model="form.phone" :label="$t('Telefon')" required :error="errors.phone" data-testid="lf-phone" />
         <BaseInput v-model="form.telegram" :label="$t('Telegram')" :icon="Send" placeholder="@username" :error="errors.telegram" />
       </div>
     </section>

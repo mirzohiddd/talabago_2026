@@ -12,10 +12,7 @@ export const initials = (name = '') =>
 
 export const fileSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
 
-/** Telefon: +998 XX XXX XX XX (9 raqam) */
-export function normalizePhone(v = '') {
-  const d = v.replace(/\D/g, '').replace(/^998/, '')
-  return d.length === 9 ? `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}` : null
-}
+/** Telefon: “+998 90 123 45 67” yoki null (to‘liq emas / operator kodi noto‘g‘ri) — qoidalar: shared/phone.js */
+export { formatPhone as normalizePhone } from '@shared/phone'
 export const telLink = (p = '') => `tel:${p.replace(/[^\d+]/g, '')}`
 export const tgLink = (u = '') => `https://t.me/${u.replace(/^@/, '')}`

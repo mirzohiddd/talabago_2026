@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -18,6 +19,35 @@ class In(BaseModel):
 
 def _empty_none(v):
     return None if v in ('', None) else v
+
+
+NAME_RE = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ɏЀ-ӿʻʼ‘’'`\- ]+$")
+
+
+def _person_name(v):
+    """Ism/familiya: 2–40 harf (lotin, kirill, o‘ g‘ belgilari, defis). Ortiqcha bo‘sh joylar olib tashlanadi."""
+    if v is None:
+        return v
+    v = re.sub(r'\s+', ' ', v).strip()
+    if not v:
+        return None
+    if len(v) < 2:
+        raise ValueError('Kamida 2 ta harf kiriting')
+    if len(v) > 40:
+        raise ValueError('Ko‘pi bilan 40 ta belgi')
+    if not NAME_RE.match(v):
+        raise ValueError('Faqat harflar kiriting (raqam va belgilarsiz)')
+    return v
+
+
+def password_policy(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError('Parol kamida 8 ta belgidan iborat bo‘lsin')
+    if not re.search(r'[A-Za-zА-Яа-яЁё]', v) or not re.search(r'\d', v):
+        raise ValueError('Parolda kamida bitta harf va bitta raqam bo‘lsin')
+    if v.strip() != v:
+        raise ValueError('Parol bo‘sh joy bilan boshlanmasin yoki tugamasin')
+    return v
 
 
 def _tg_handle(v):
@@ -73,10 +103,15 @@ class ProfileIn(In):
     def _phone(cls, v):
         if v is None:
             return v
-        p = C.normalize_phone(v)
-        if not p:
-            raise ValueError('Telefon raqam noto‘g‘ri: +998 XX XXX XX XX')
-        return p
+        problem = C.phone_problem(v)
+        if problem:
+            raise ValueError(problem)
+        return C.normalize_phone(v)
+
+    @field_validator('firstName', 'lastName')
+    @classmethod
+    def _name(cls, v):
+        return _person_name(v)
 
     @field_validator('telegram')
     @classmethod
@@ -90,8 +125,15 @@ class ProfileIn(In):
     @field_validator('birthDate')
     @classmethod
     def _date(cls, v):
-        if v and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', v):
-            raise ValueError('Sana formati YYYY-MM-DD')
+        if not v:
+            return v
+        try:
+            d = date.fromisoformat(v)
+        except ValueError:
+            raise ValueError('Sana formati noto‘g‘ri (YYYY-MM-DD)') from None
+        age = (date.today() - d).days / 365.25
+        if not 14 <= age <= 70:
+            raise ValueError('Tug‘ilgan sana noto‘g‘ri: yosh 14 dan 70 gacha bo‘lishi kerak')
         return v
 
     @field_validator('logo')
@@ -104,10 +146,23 @@ class ProfileIn(In):
 
 class RegisterIn(ProfileIn):
     role: Literal[C.ROLES]
-    firstName: Str(60) = Field(min_length=2)
+    firstName: Str(40)
+    lastName: Str(40)
     phone: Str(30)
     password: Str(128) | None = None
     initData: Str(4096) | None = None
+
+    @field_validator('firstName', 'lastName', mode='before')
+    @classmethod
+    def _required_name(cls, v):
+        if not (isinstance(v, str) and v.strip()):
+            raise ValueError('Majburiy maydon')
+        return v
+
+    @field_validator('password')
+    @classmethod
+    def _pw(cls, v):
+        return password_policy(v) if v is not None else v
 
 
 class LoginIn(In):
@@ -121,7 +176,12 @@ class TelegramAuthIn(In):
 
 class PasswordIn(In):
     current: Str(128) = ''
-    next: Str(128) = Field(min_length=8)
+    next: Str(128)
+
+    @field_validator('next')
+    @classmethod
+    def _pw(cls, v):
+        return password_policy(v)
 
 
 class AdminLoginIn(In):

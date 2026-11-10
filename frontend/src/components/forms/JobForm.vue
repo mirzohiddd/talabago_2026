@@ -1,8 +1,9 @@
 <script setup>
 /** Vakansiya formasi (yaratish va tahrirlash). Yuborilgach TalabaGo Support tasdig‘iga tushadi. */
 import { reactive, computed, ref } from 'vue'
-import { Briefcase, Building2, Wallet, CalendarClock, Phone, Send, MapPin } from 'lucide-vue-next'
+import { Briefcase, Building2, Wallet, CalendarClock, Send, MapPin } from 'lucide-vue-next'
 import BaseInput from '@/components/ui/BaseInput.vue'
+import PhoneInput from '@/components/ui/PhoneInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseTextarea from '@/components/ui/BaseTextarea.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -35,7 +36,7 @@ const errors = ref({})
 function submit() {
   errors.value = validate(form, {
     title: [rules.required, rules.min(4)], company: [rules.required], salary: [rules.required, rules.positive],
-    schedule: [rules.required], description: [rules.required, rules.min(30)], phone: [rules.required, rules.phone], telegram: [rules.telegram],
+    schedule: [rules.required], description: [rules.required, rules.min(30)], phone: [rules.phoneRequired], telegram: [rules.telegram],
     ...(form.format === 'offline' ? { district: [rules.required] } : {}),
   })
   if (Object.keys(errors.value).length) {
@@ -89,7 +90,7 @@ function submit() {
     <section class="space-y-4">
       <h3 class="sec">{{ $t('Bog‘lanish') }}</h3>
       <div class="grid sm:grid-cols-2 gap-4">
-        <BaseInput v-model="form.phone" type="tel" :label="$t('Telefon')" :icon="Phone" required :error="errors.phone" />
+        <PhoneInput v-model="form.phone" :label="$t('Telefon')" required :error="errors.phone" data-testid="lf-phone" />
         <BaseInput v-model="form.telegram" :label="$t('Telegram')" :icon="Send" placeholder="@username" :error="errors.telegram" />
       </div>
     </section>

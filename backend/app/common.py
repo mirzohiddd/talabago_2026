@@ -25,7 +25,7 @@ SALARY_MIN = {'1': 1_000_000, '3': 3_000_000, '5': 5_000_000}
 PRICE_MAX = {'1': 1_000_000, '2': 2_000_000, '3': 3_000_000, '5': 5_000_000}
 QUIZ_PASS = 3
 
-PRIVATE_USER_FIELDS = ('passwordHash', 'telegramId')
+PRIVATE_USER_FIELDS = ('passwordHash', 'telegramId', 'tokenVersion')  # hech qachon API javobida chiqmaydi
 
 
 def now_iso() -> str:
@@ -36,11 +36,39 @@ def new_id(prefix: str) -> str:
     return f'{prefix}_{secrets.token_hex(6)}'
 
 
-def normalize_phone(v: str | None) -> str | None:
-    d = re.sub(r'\D', '', v or '')
-    if d.startswith('998'):
+# +998 dan keyingi ruxsat etilgan kodlar (frontend: shared/phone.js bilan bir xil)
+PHONE_CODES = frozenset({'20', '33', '50', '55', '61', '62', '65', '66', '67', '69', '70', '71', '72', '73', '74', '75', '76', '77', '78', '79',
+                         '80', '87', '88', '90', '91', '92', '93', '94', '95', '97', '98', '99'})
+
+
+def phone_digits(v: str | None) -> str:
+    s = (v or '').strip()
+    if s.startswith('+998'):
+        return re.sub(r'\D', '', s[4:])
+    d = re.sub(r'\D', '', s)
+    if len(d) > 9 and d.startswith('998'):  # “998 90 …” — xalqaro shakl; 9 raqamli “99 8…” raqami buzilmaydi
         d = d[3:]
-    return f'+998 {d[:2]} {d[2:5]} {d[5:7]} {d[7:]}' if len(d) == 9 else None
+    return d
+
+
+def phone_problem(v: str | None) -> str | None:
+    """None — to‘g‘ri; aks holda o‘zbekcha sabab."""
+    d = phone_digits(v)
+    if not d:
+        return 'Telefon raqamini kiriting'
+    if len(d) != 9:
+        return 'Telefon raqam to‘liq emas: +998 dan keyin 9 ta raqam kiriting'
+    if d[:2] not in PHONE_CODES:
+        return 'Operator kodi noto‘g‘ri (masalan: 90, 91, 93, 94, 97, 99, 33, 88)'
+    return None
+
+
+def normalize_phone(v: str | None) -> str | None:
+    """“+998 90 123 45 67” yoki None (noto‘g‘ri / to‘liq emas)"""
+    if phone_problem(v):
+        return None
+    d = phone_digits(v)
+    return f'+998 {d[:2]} {d[2:5]} {d[5:7]} {d[7:]}'
 
 
 def phone_key(v: str | None) -> str:

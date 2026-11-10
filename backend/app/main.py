@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -24,6 +25,49 @@ from .telegram import handle_update
 log = logging.getLogger('talabago')
 SEED_DIR = Path(__file__).parent / 'seed'
 API_PREFIX = '/api/v1'
+
+
+# Validatsiya xatolari — foydalanuvchiga o‘zbek tilida (pydantic’ning inglizcha matni o‘rniga)
+FIELD_LABELS = {
+    'firstName': 'Ism', 'lastName': 'Familiya', 'phone': 'Telefon', 'password': 'Parol', 'next': 'Yangi parol', 'current': 'Joriy parol',
+    'company': 'Kompaniya nomi', 'telegram': 'Telegram', 'birthDate': 'Tug‘ilgan sana', 'university': 'O‘quv yurti', 'faculty': 'Yo‘nalish',
+    'course': 'Kurs', 'shift': 'Smena', 'city': 'Shahar', 'district': 'Tuman', 'title': 'Sarlavha', 'description': 'Tavsif',
+    'salary': 'Maosh', 'price': 'Narx', 'address': 'Manzil', 'photos': 'Rasmlar', 'role': 'Rol', 'username': 'Login', 'text': 'Matn',
+    'subject': 'Mavzu', 'message': 'Xabar', 'moveIn': 'Ko‘chish sanasi', 'rooms': 'Xonalar', 'capacity': 'Sig‘im', 'link': 'Havola',
+}
+
+
+def uz_error(e: dict) -> str:
+    t, ctx = e.get('type', ''), e.get('ctx') or {}
+    if t == 'value_error':
+        return str(ctx.get('error') or e['msg']).replace('Value error, ', '')
+    return {
+        'missing': 'Majburiy maydon',
+        'string_too_short': f'Kamida {ctx.get("min_length")} ta belgi',
+        'string_too_long': f'Ko‘pi bilan {ctx.get("max_length")} ta belgi',
+        'too_short': f'Kamida {ctx.get("min_length")} ta element',
+        'too_long': f'Ko‘pi bilan {ctx.get("max_length")} ta element',
+        'string_type': 'Matn kiriting', 'int_parsing': 'Butun son kiriting', 'int_type': 'Butun son kiriting',
+        'float_parsing': 'Son kiriting', 'bool_type': 'Ha/yo‘q qiymati kutilgan', 'bool_parsing': 'Ha/yo‘q qiymati kutilgan',
+        'greater_than': f'{ctx.get("gt")} dan katta bo‘lsin', 'greater_than_equal': f'Kamida {ctx.get("ge")}',
+        'less_than': f'{ctx.get("lt")} dan kichik bo‘lsin', 'less_than_equal': f'Ko‘pi bilan {ctx.get("le")}',
+        'literal_error': 'Ruxsat etilmagan qiymat', 'enum': 'Ruxsat etilmagan qiymat',
+        'extra_forbidden': 'Noma’lum maydon', 'json_invalid': 'JSON noto‘g‘ri', 'list_type': 'Ro‘yxat kutilgan',
+        'dict_type': 'Obyekt kutilgan', 'model_attributes_type': 'Obyekt kutilgan', 'url_parsing': 'Havola noto‘g‘ri',
+    }.get(t, 'Qiymat noto‘g‘ri')
+
+
+class ApiGZip:
+    """GZip faqat /api/ uchun (fayllar va media’ga CPU sarflanmaydi)."""
+
+    def __init__(self, app, **kw):
+        self.app = app
+        self.gzip = GZipMiddleware(app, **kw)
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] == 'http' and scope.get('path', '').startswith(API_PREFIX):
+            return await self.gzip(scope, receive, send)
+        return await self.app(scope, receive, send)
 
 
 def env_admin_id(username: str) -> str:
@@ -103,7 +147,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         bootstrap(settings)
         yield
 
-    app = FastAPI(title='TalabaGo API', version='1.0.0', lifespan=lifespan, docs_url='/api/docs', openapi_url='/api/openapi.json', redoc_url=None)
+    docs = settings.API_DOCS
+    app = FastAPI(title='TalabaGo API', version='1.0.0', lifespan=lifespan, docs_url='/api/docs' if docs else None,
+                  openapi_url='/api/openapi.json' if docs else None, redoc_url=None)
+    upload_limit = max(settings.MAX_VIDEO_MB, settings.MAX_IMAGE_MB, settings.MAX_DOC_MB) * 1024 * 1024 + 1024 * 1024
+    json_limit = settings.MAX_JSON_KB * 1024
     app.add_middleware(
         CORSMiddleware, allow_origins=settings.cors_list, allow_origin_regex=settings.CORS_ORIGIN_REGEX or None, allow_credentials=True,
         allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -113,7 +161,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.middleware('http')
     async def security_headers(request: Request, call_next):
+        # So‘rov hajmi: katta JSON bilan xotirani to‘ldirishga qarshi (fayl yuklash — multipart — alohida, kattaroq chegara)
+        size = request.headers.get('content-length')
+        if size and size.isdigit():
+            multipart = request.headers.get('content-type', '').startswith('multipart/form-data')
+            if int(size) > (upload_limit if multipart else json_limit):
+                return JSONResponse({'detail': 'So‘rov hajmi juda katta'}, status_code=413)
         resp = await call_next(request)
+        resp.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
+        if settings.cookie_secure:
+            resp.headers.setdefault('Strict-Transport-Security', 'max-age=15552000')
         resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
         resp.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         resp.headers.setdefault('X-Frame-Options', 'DENY')
@@ -131,12 +188,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, exc: RequestValidationError):
-        errors = [{'field': '.'.join(str(p) for p in e['loc'][1:]), 'message': e['msg'].replace('Value error, ', '')} for e in exc.errors()]
+        errors = [{'field': '.'.join(str(p) for p in e['loc'][1:]), 'message': uz_error(e)} for e in exc.errors()]
         first = errors[0] if errors else {'field': '', 'message': 'Ma’lumot noto‘g‘ri'}
-        return JSONResponse({'detail': f'{first["field"]}: {first["message"]}' if first['field'] else first['message'], 'errors': errors}, status_code=422)
+        label = FIELD_LABELS.get(first['field'].split('.')[0], '')
+        return JSONResponse({'detail': f'{label}: {first["message"]}' if label else first['message'], 'errors': errors}, status_code=422)
 
     for r in (auth.router, users.router, listings.router, content.router, admin.router):
         app.include_router(r, prefix=API_PREFIX)
+
+    # JSON javoblarni siqish (≈10× kichik; mobil internetda ro‘yxatlar tez ochiladi). /media (rasm/video) siqilmaydi — ular allaqachon siqilgan.
+    app.add_middleware(ApiGZip, minimum_size=1024, compresslevel=5)
 
     @app.get(API_PREFIX + '/health', tags=['system'])
     def health():

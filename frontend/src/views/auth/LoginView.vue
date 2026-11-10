@@ -15,6 +15,8 @@ import { isTelegram, haptic } from '@/services/telegram'
 import { session, signIn, toast } from '@/stores/session'
 import { ROLES } from '@/config/roles'
 import { normalizePhone } from '@/utils/format'
+import { phoneProblem, PHONE_MESSAGES } from '@shared/phone'
+import PhoneInput from '@/components/ui/PhoneInput.vue'
 import { t } from '@/i18n'
 
 const router = useRouter()
@@ -36,7 +38,8 @@ function enter({ user, token }) {
 async function submit() {
   errors.value = {}
   const phone = normalizePhone(form.phone)
-  if (!phone) errors.value.phone = t('Telefon raqam noto‘g‘ri: +998 XX XXX XX XX')
+  const problem = phoneProblem(form.phone)
+  if (problem) errors.value.phone = t(PHONE_MESSAGES[problem])
   if (!form.password) errors.value.password = t('Majburiy maydon')
   if (Object.keys(errors.value).length) return
   loading.value = true
@@ -78,7 +81,7 @@ onMounted(() => { if (isTelegram) telegram() })
       <BaseButton v-if="isTelegram" block size="lg" variant="soft" class="mt-6" :icon="Send" :loading="tgLoading" data-testid="tg-login" @click="telegram">{{ $t('Telegram orqali kirish') }}</BaseButton>
 
       <form class="mt-6 space-y-4" novalidate @submit.prevent="submit">
-        <BaseInput v-model="form.phone" type="tel" inputmode="tel" :label="$t('Telefon')" :icon="Phone" placeholder="+998 90 123 45 67" autocomplete="tel" :error="errors.phone" data-testid="login-phone" />
+        <PhoneInput v-model="form.phone" :label="$t('Telefon')" :error="errors.phone" :validate-on-blur="false" data-testid="login-phone" />
         <div class="relative">
           <BaseInput v-model="form.password" :type="show ? 'text' : 'password'" :label="$t('Parol')" :icon="Lock" autocomplete="current-password" :error="errors.password" data-testid="login-password" />
           <button type="button" class="absolute right-3 top-[34px] size-8 grid place-items-center text-muted hover:text-ink" :aria-label="show ? $t('Parolni yashirish') : $t('Parolni ko‘rsatish')" @click="show = !show">

@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD_HASH: str = ''  # python -m app.cli hash-password bilan olinadi
 
     # --- Cheklovlar ---
+    API_DOCS: bool = True       # production’da false: /api/docs va openapi.json yopiladi
+    MAX_JSON_KB: int = 1024     # fayl yuklashdan boshqa so‘rovlar tanasi chegarasi
     MAX_IMAGE_MB: int = 5
     MAX_DOC_MB: int = 5
     MAX_VIDEO_MB: int = 60

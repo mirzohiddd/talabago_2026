@@ -27,6 +27,15 @@ def update_me(body: ProfileIn, user: dict = Depends(get_current_user), store: Js
         raise HTTPException(422, 'Ism kamida 2 belgi')
     if 'phone' in patch and not patch['phone']:
         raise HTTPException(422, 'Telefon majburiy')
+    if user['role'] == 'employer' and 'company' in patch and not (patch['company'] and len(patch['company']) >= 2):
+        raise HTTPException(422, 'Kompaniya nomini kiriting')
+    # rolga tegishli bo‘lmagan maydonlar saqlanmaydi (ro‘yxatdan o‘tishdagi qoida bilan bir xil)
+    if user['role'] != 'student':
+        for k in ('birthDate', 'university', 'faculty', 'shift', 'course', 'skills', 'cv'):
+            patch.pop(k, None)
+    if user['role'] != 'employer':
+        for k in ('company', 'industry', 'address', 'position', 'logo'):
+            patch.pop(k, None)
     with store.tx('users') as db:
         if patch.get('phone') and any(C.phone_key(x.get('phone')) == C.phone_key(patch['phone']) and x['id'] != user['id'] for x in db['users']):
             raise HTTPException(409, 'Bu telefon raqam boshqa hisobda ishlatilgan')

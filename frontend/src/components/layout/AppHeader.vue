@@ -30,11 +30,14 @@ async function openSearch() {
   input.value?.focus()
 }
 function closeSearch() { search.open = false; search.query = '' }
-async function refreshSupport() {
-  if (!session.token) return
-  try { supportUnread.value = (await supportApi.list()).filter((t) => t.unreadByUser).length } catch { /* keyinroq */ }
+// Support javoblari belgisi: sahifa almashganda ko‘pi bilan 30 soniyada bir marta (har o‘tishda so‘rov yuborilmaydi) + har 60 s
+let supportAt = 0
+async function refreshSupport(force = false) {
+  if (!session.token || (!force && Date.now() - supportAt < 30000)) return
+  supportAt = Date.now()
+  try { supportUnread.value = (await supportApi.list()).filter((t) => t.unreadByUser).length } catch { supportAt = 0 }
 }
-const timer = setInterval(() => { if (document.visibilityState === 'visible') refreshSupport() }, 60000)
+const timer = setInterval(() => { if (document.visibilityState === 'visible') refreshSupport(true) }, 60000)
 onBeforeUnmount(() => clearInterval(timer))
 
 watch(() => route.path, () => { search.query = ''; search.open = false; notifOpen.value = false; profileOpen.value = false; refreshSupport() }, { immediate: true })

@@ -32,7 +32,8 @@ def platform_settings(store: JsonStore) -> dict:
 
 
 def issue_user_token(settings: Settings, user: dict) -> str:
-    token, _ = create_token(settings.JWT_SECRET_KEY, user['id'], 'user', timedelta(days=settings.USER_TOKEN_DAYS), role=user['role'])
+    # ver — parol almashganda eski (o‘g‘irlangan bo‘lishi mumkin) tokenlar bekor bo‘ladi
+    token, _ = create_token(settings.JWT_SECRET_KEY, user['id'], 'user', timedelta(days=settings.USER_TOKEN_DAYS), role=user['role'], ver=user.get('tokenVersion', 0))
     return token
 
 
@@ -76,9 +77,11 @@ def get_current_user(request: Request, settings: Settings = Depends(get_settings
     data = decode_token(settings.JWT_SECRET_KEY, token, 'user') if token else None
     if not data:
         raise HTTPException(401, 'Avtorizatsiya talab qilinadi')
-    user = next((u for u in store.read('users') if u['id'] == data['sub']), None)
+    user = store.get('users', data['sub'])
     if not user:
         raise HTTPException(401, 'Hisob topilmadi')
+    if user.get('tokenVersion', 0) != data.get('ver', 0):
+        raise HTTPException(401, 'Sessiya tugagan. Qayta kiring.')
     if user.get('status') == 'blocked':
         raise HTTPException(403, 'Hisobingiz bloklangan. Texnik yordamga murojaat qiling.')
     if platform_settings(store)['system']['maintenance']:
@@ -100,7 +103,7 @@ def get_admin(request: Request, response: Response, settings: Settings = Depends
     data = decode_token(settings.JWT_SECRET_KEY, token, 'admin') if token else None
     if not data:
         raise HTTPException(401, 'Administrator sifatida kiring')
-    admin = next((a for a in store.read('admins') if a['id'] == data['sub']), None)
+    admin = store.get('admins', data['sub'])
     if not admin or admin.get('status') == 'blocked' or admin.get('tokenVersion', 0) != data.get('ver', 0):
         raise HTTPException(401, 'Sessiya bekor qilingan')
     # CSRF: cookie bilan kelgan o‘zgartiruvchi so‘rovlarda maxsus sarlavha majburiy (boshqa saytdan yuborib bo‘lmaydi)

@@ -51,6 +51,7 @@ class JsonStore:
         self._lock_path = self.db_dir / '.lock'
         self._lock_path.touch(exist_ok=True)
         self._cache: dict[str, tuple[int, int, Any]] = {}
+        self._index: dict[tuple[str, str], tuple[Any, dict]] = {}  # (kolleksiya, maydon) → (qaysi ma’lumot uchun, {qiymat: yozuv})
         self._last_backup: dict[str, float] = {}
 
     # ------------------------------------------------------------------ yordamchi
@@ -159,6 +160,35 @@ class JsonStore:
         """Kolleksiyaning nusxasi (o‘zgartirish omborga ta’sir qilmaydi)."""
         with self._file_lock(exclusive=False):
             return copy.deepcopy(self._load(name))
+
+    def get(self, name: str, item_id: str, key: str = 'id') -> dict | None:
+        """Bitta yozuv (nusxasi) — butun kolleksiyani nusxalamasdan. Har so‘rovdagi autentifikatsiya uchun (10 000 foydalanuvchida ~80 ms → <1 ms)."""
+        with self._file_lock(exclusive=False):
+            data = self._load(name)
+            idx = self._index.get((name, key))
+            if idx is None or idx[0] is not data:
+                idx = (data, {str(x.get(key)): x for x in data if isinstance(x, dict) and x.get(key) is not None})
+                self._index[(name, key)] = idx
+            item = idx[1].get(str(item_id))
+            return copy.deepcopy(item) if item is not None else None
+
+    def peek(self, *names: str) -> dict[str, Any]:
+        """
+        FAQAT O‘QISH uchun — nusxalanmaydi (tez). Qaytgan obyektlarni o‘zgartirish TAQIQLANADI (keshni buzadi):
+        javob uchun yangi dict yarating ({**item, ...}). O‘zgartirish kerak bo‘lsa — read()/tx().
+        """
+        with self._file_lock(exclusive=False):
+            return {n: self._load(n) for n in names}
+
+    def derived(self, name: str, tag: str, fn) -> Any:
+        """Kolleksiyadan hisoblangan qiymat (masalan, bloklangan foydalanuvchilar to‘plami) — kolleksiya o‘zgarguncha keshlanadi."""
+        with self._file_lock(exclusive=False):
+            data = self._load(name)
+            hit = self._index.get((name, '#' + tag))
+            if hit is None or hit[0] is not data:
+                hit = (data, fn(data))
+                self._index[(name, '#' + tag)] = hit
+            return hit[1]
 
     def read_many(self, *names: str) -> dict[str, Any]:
         with self._file_lock(exclusive=False):

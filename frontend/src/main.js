@@ -28,5 +28,8 @@ app.config.errorHandler = (err) => {
 window.addEventListener('unhandledrejection', (e) => {
   if (e.reason?.status !== undefined && e.reason?.message) toast(e.reason.message, 'error')
 })
-app.mount('#app')
-markBooted()
+// Tanlangan til lug‘ati (rus/ingliz) yuklangach mount — o‘zbek tilida kutish yo‘q
+i18n.ready.finally(() => {
+  app.mount('#app')
+  markBooted()
+})

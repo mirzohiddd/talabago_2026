@@ -93,7 +93,7 @@ def telegram_login(body: TelegramAuthIn, settings: Settings = Depends(get_settin
     return {'user': C.public_user(u), 'token': issue_user_token(settings, u)}
 
 
-@router.post('/auth/telegram/link')
+@router.post('/auth/telegram/link', dependencies=[Depends(ratelimit.limit('tg-link', 10, 300))])
 def telegram_link(body: TelegramAuthIn, user: dict = Depends(get_current_user), settings: Settings = Depends(get_settings), store: JsonStore = Depends(get_store)):
     """Telefon bilan ro‘yxatdan o‘tgan hisobni Telegram’ga bog‘lash (Mini App ichidan)."""
     tg = _verify_tg(body.initData, settings)
@@ -106,14 +106,19 @@ def telegram_link(body: TelegramAuthIn, user: dict = Depends(get_current_user), 
     return C.public_user(u)
 
 
-@router.post('/users/me/password', status_code=204)
-def change_password(body: PasswordIn, user: dict = Depends(get_current_user), store: JsonStore = Depends(get_store)):
+@router.post('/users/me/password')
+def change_password(body: PasswordIn, user: dict = Depends(get_current_user), settings: Settings = Depends(get_settings), store: JsonStore = Depends(get_store)):
+    fail_key = f'pw-fail:{user["id"]}'
+    ratelimit.guard_failures(fail_key, LOGIN_FAILS, LOCK_WINDOW)  # joriy parolni tanlab topishga qarshi
     if user.get('passwordHash') and not verify_password(body.current, user['passwordHash']):
+        ratelimit.record(fail_key)
         raise HTTPException(400, 'Joriy parol noto‘g‘ri')
     with store.tx('users') as db:
         u = next(x for x in db['users'] if x['id'] == user['id'])
         u['passwordHash'] = hash_password(body.next)
+        u['tokenVersion'] = u.get('tokenVersion', 0) + 1  # boshqa qurilmalardagi sessiyalar bekor
         u['updatedAt'] = C.now_iso()
+    return {'token': issue_user_token(settings, u)}
 
 
 # ======================================================================= administrator

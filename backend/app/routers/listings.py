@@ -26,7 +26,7 @@ def _truthy(v) -> bool:
 
 
 def _saved(store: JsonStore, user_id: str, key: str) -> list[str]:
-    return (store.read('saved').get(user_id) or {}).get(key, [])
+    return list((store.peek('saved')['saved'].get(user_id) or {}).get(key, []))  # nusxa — kesh o‘zgarmaydi
 
 
 def _initial_status(store: JsonStore) -> tuple[str, str | None]:
@@ -39,8 +39,8 @@ def _initial_status(store: JsonStore) -> tuple[str, str | None]:
 @router.get('/jobs')
 def list_jobs(request: Request, user: dict = Depends(get_current_user), store: JsonStore = Depends(get_store)):
     f = dict(request.query_params)
-    db = store.read_many('jobs', 'applications', 'users')
-    blocked = C.blocked_ids(db['users'])
+    db = store.peek('jobs', 'applications')  # faqat o‘qiladi — javob yangi dict’lardan
+    blocked = _blocked(store)
     saved = set(_saved(store, user['id'], 'jobs'))
     applied = {a['jobId'] for a in db['applications'] if a['studentId'] == user['id'] and a['status'] != 'withdrawn'}
     salary_min = C.SALARY_MIN.get(f.get('salary', ''), 0)
@@ -63,6 +63,11 @@ def list_jobs(request: Request, user: dict = Depends(get_current_user), store: J
     return C.by_date_desc(out)
 
 
+def _blocked(store: JsonStore) -> frozenset:
+    """Bloklangan foydalanuvchilar ID’lari — users.json o‘zgarguncha keshlanadi (har so‘rovda butun ro‘yxat nusxalanmaydi)"""
+    return store.derived('users', 'blocked', lambda us: frozenset(C.blocked_ids(us)))
+
+
 def _owner_card(u: dict | None) -> dict | None:
     return {'id': u['id'], 'name': C.full_name(u), 'phone': u.get('phone'), 'telegram': u.get('telegram')} if u else None
 
@@ -70,9 +75,9 @@ def _owner_card(u: dict | None) -> dict | None:
 @router.get('/houses')
 def list_houses(request: Request, user: dict = Depends(get_current_user), store: JsonStore = Depends(get_store)):
     f = dict(request.query_params)
-    db = store.read_many('houses', 'requests', 'users')
-    users = {u['id']: u for u in db['users']}
-    blocked = C.blocked_ids(db['users'])
+    db = store.peek('houses', 'requests')
+    blocked = _blocked(store)
+    owners: dict[str, dict | None] = {}
     saved = set(_saved(store, user['id'], 'houses'))
     requested = {r['houseId'] for r in db['requests'] if r['studentId'] == user['id'] and r['status'] != 'withdrawn'}
     pmax = C.PRICE_MAX.get(f.get('price', ''))
@@ -97,15 +102,16 @@ def list_houses(request: Request, user: dict = Depends(get_current_user), store:
             continue
         if not C.matches(h, f.get('q'), ['title', 'district', 'address', 'city']):
             continue
-        out.append({**h, 'owner': _owner_card(users.get(h['ownerId'])), 'saved': h['id'] in saved, 'requested': h['id'] in requested})
+        if h['ownerId'] not in owners:
+            owners[h['ownerId']] = _owner_card(store.get('users', h['ownerId']))
+        out.append({**h, 'owner': owners[h['ownerId']], 'saved': h['id'] in saved, 'requested': h['id'] in requested})
     return C.by_date_desc(out)
 
 
 def _get_visible(store: JsonStore, kind: str, item_id: str, user: dict) -> dict:
     k = KIND[kind]
-    db = store.read_many(k['coll'], 'users')
-    item = next((x for x in db[k['coll']] if x['id'] == item_id), None)
-    hidden = item and item[k['owner']] in C.blocked_ids(db['users'])
+    item = store.get(k['coll'], item_id)
+    hidden = item and item[k['owner']] in _blocked(store)
     if not item or ((item['status'] != 'active' or hidden) and item[k['owner']] != user['id']):
         raise HTTPException(404, 'E’lon topilmadi')
     return item
@@ -119,8 +125,7 @@ def get_job(item_id: str, user: dict = Depends(get_current_user), store: JsonSto
 @router.get('/houses/{item_id}')
 def get_house(item_id: str, user: dict = Depends(get_current_user), store: JsonStore = Depends(get_store)):
     h = _get_visible(store, 'house', item_id, user)
-    owner = next((u for u in store.read('users') if u['id'] == h['ownerId']), None)
-    return {**h, 'owner': _owner_card(owner)}
+    return {**h, 'owner': _owner_card(store.get('users', h['ownerId']))}
 
 
 def _view(kind: str):

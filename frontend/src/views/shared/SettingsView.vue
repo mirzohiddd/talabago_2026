@@ -20,7 +20,7 @@ import { session, logout, toast } from '@/stores/session'
 import { ROLES, SHIFTS } from '@/config/roles'
 import { authApi, jobsApi, housingApi, uploadFile, fullName } from '@/services'
 import { LOCALES, i18n, setLocale, t } from '@/i18n'
-import { validate, profileSchema } from '@/utils/validate'
+import { validate, profileSchema, rules, serverFieldErrors } from '@/utils/validate'
 import { normalizePhone, fileSize } from '@/utils/format'
 
 const route = useRoute()
@@ -45,16 +45,24 @@ const saving = ref(false)
 function openEdit(key) { form.value = JSON.parse(JSON.stringify(u.value)); errors.value = {}; edit.value = key }
 watch(() => route.query.edit, (v) => { if (v && SECTIONS[v]) { openEdit(v); router.replace({ query: {} }) } }, { immediate: true })
 async function save() {
-  const schema = profileSchema(session.role)
+  // Faqat o‘zgargan maydonlar tekshiriladi va yuboriladi: eski (masalan, Telegram’dan kelgan) qiymat boshqa bo‘limni saqlashga to‘sqinlik qilmasin
+  const same = (a, b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '')
+  const changed = Object.keys(form.value).filter((k) => !same(form.value[k], u.value[k]))
+  if (!changed.length) { edit.value = null; return }
+  const schema = Object.fromEntries(Object.entries(profileSchema(session.role)).filter(([k]) => changed.includes(k)))
   errors.value = validate(form.value, schema)
   if (Object.keys(errors.value).length) return
   saving.value = true
-  const patch = { ...form.value, phone: normalizePhone(form.value.phone) || form.value.phone, telegram: form.value.telegram ? '@' + form.value.telegram.replace(/^@/, '') : '' }
+  const patch = Object.fromEntries(changed.map((k) => [k, form.value[k]]))
+  if ('phone' in patch) patch.phone = normalizePhone(patch.phone) || patch.phone
+  if ('telegram' in patch) patch.telegram = patch.telegram ? '@' + patch.telegram.replace(/^@/, '') : ''
   try {
     session.user = await authApi.updateProfile(patch)
     edit.value = null
     toast(t('Profil saqlandi'))
   } catch (e) {
+    if (e.status === 422) errors.value = serverFieldErrors(e)
+    if (e.status === 409) errors.value = { phone: e.message }
     toast(e.message, 'error')
   } finally {
     saving.value = false
@@ -83,17 +91,20 @@ function openPw() { pw.value = { current: '', next: '', confirm: '' }; pwErr.val
 async function savePw() {
   pwErr.value = {}
   if (u.value.hasPassword && !pw.value.current) pwErr.value.current = t('Majburiy maydon')
-  if (pw.value.next.length < 8) pwErr.value.next = t('Kamida {n} ta belgi', { n: 8 })
+  const pe = rules.password(pw.value.next)
+  if (pe) pwErr.value.next = pe
   else if (pw.value.next !== pw.value.confirm) pwErr.value.confirm = t('Parollar mos emas')
   if (Object.keys(pwErr.value).length) return
   pwSaving.value = true
   try {
-    await authApi.changePassword(pw.value.current, pw.value.next)
+    const r = await authApi.changePassword(pw.value.current, pw.value.next)
+    if (r?.token) session.token = r.token // eski sessiyalar serverda bekor qilindi — yangi token
     session.user = await authApi.me()
     pwOpen.value = false
     toast(t('Parol saqlandi'))
   } catch (e) {
     if (e.status === 400) pwErr.value.current = t('Joriy parol noto‘g‘ri')
+    else if (e.status === 422) pwErr.value = { ...pwErr.value, ...Object.fromEntries(Object.entries(serverFieldErrors(e)).map(([k, v]) => [k === 'next' ? 'next' : k, v])) }
     else toast(e.message, 'error')
   } finally {
     pwSaving.value = false

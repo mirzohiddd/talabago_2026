@@ -30,13 +30,13 @@ def test_register_login_and_duplicates(client):
 
 
 def test_register_validation(client):
-    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Al', 'phone': '123', 'password': 'parol12345'})
-    assert r.status_code == 422 and 'phone' in r.json()['detail']
-    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Ali', 'phone': '901234500'})
+    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Al', 'lastName': 'Karimov', 'phone': '123', 'password': 'parol12345'})
+    assert r.status_code == 422 and r.json()['errors'][0]['field'] == 'phone' and r.json()['detail'].startswith('Telefon:')
+    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Ali', 'lastName': 'Karimov', 'phone': '901234500'})
     assert r.status_code == 422, 'Telegram’siz parol majburiy'
-    r = client.post(API + '/auth/register', json={'role': 'admin', 'firstName': 'Ali', 'phone': '901234501', 'password': 'parol12345'})
+    r = client.post(API + '/auth/register', json={'role': 'admin', 'firstName': 'Ali', 'lastName': 'Karimov', 'phone': '901234501', 'password': 'parol12345'})
     assert r.status_code == 422
-    r = client.post(API + '/auth/register', json={'role': 'employer', 'firstName': 'Ali', 'phone': '901234502', 'password': 'parol12345'})
+    r = client.post(API + '/auth/register', json={'role': 'employer', 'firstName': 'Ali', 'lastName': 'Karimov', 'phone': '901234502', 'password': 'parol12345'})
     assert r.status_code == 422, 'ish beruvchi uchun kompaniya majburiy'
 
 
@@ -51,7 +51,7 @@ def test_login_lockout(client):
 def test_telegram_register_and_login(client):
     init = sign_init_data({'id': 987654, 'first_name': 'Tg', 'username': 'tg_user1'}, BOT)
     assert client.post(API + '/auth/telegram', json={'initData': init}).status_code == 404
-    r = client.post(API + '/auth/register', json={'role': 'landlord', 'firstName': 'Tg', 'phone': '939998877', 'initData': init})
+    r = client.post(API + '/auth/register', json={'role': 'landlord', 'firstName': 'Tg', 'lastName': 'Karimov', 'phone': '939998877', 'initData': init})
     assert r.status_code == 201 and r.json()['user']['telegram'] == '@tg_user1' and r.json()['user']['telegramLinked']
     r = client.post(API + '/auth/telegram', json={'initData': init})
     assert r.status_code == 200 and r.json()['user']['role'] == 'landlord'
@@ -71,7 +71,10 @@ def test_profile_update_and_password(client):
     assert client.patch(API + '/users/me', headers=h, json={'phone': 'abc'}).status_code == 422
     assert client.patch(API + '/users/me', headers=h, json={'cv': {'url': 'https://evil.com/x.pdf', 'name': 'x'}}).status_code == 422
     assert client.post(API + '/users/me/password', headers=h, json={'current': 'xato', 'next': 'yangiparol1'}).status_code == 400
-    assert client.post(API + '/users/me/password', headers=h, json={'current': 'parol12345', 'next': 'yangiparol1'}).status_code == 204
+    r = client.post(API + '/users/me/password', headers=h, json={'current': 'parol12345', 'next': 'yangiparol1'})
+    assert r.status_code == 200 and r.json()['token']
+    assert client.get(API + '/users/me', headers=h).status_code == 401, 'eski token bekor'
+    h = {'Authorization': f"Bearer {r.json()['token']}"}
     assert client.post(API + '/auth/login', json={'phone': body['phone'], 'password': 'yangiparol1'}).status_code == 200
 
 
@@ -299,7 +302,7 @@ def test_block_user_and_settings(client, admin):
     assert client.post(API + '/employer/jobs', headers=eh, json=JOB).json()['status'] == 'active', 'moderatsiya o‘chiq — darhol faol'
     s['system'].update(moderation=True, registrationOpen=False)
     admin.put(API + '/crm/settings', json=s)
-    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Yopiq', 'phone': '977776655', 'password': 'parol12345'})
+    r = client.post(API + '/auth/register', json={'role': 'student', 'firstName': 'Yopiq', 'lastName': 'Karimov', 'phone': '977776655', 'password': 'parol12345'})
     assert r.status_code == 403
     s['system'].update(registrationOpen=True, maintenance=True)
     admin.put(API + '/crm/settings', json=s)
