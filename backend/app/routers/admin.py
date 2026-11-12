@@ -11,6 +11,7 @@ from .. import common as C
 from ..config import Settings, get_settings
 from ..deps import get_admin, get_store, platform_settings
 from ..schemas import Attachment, HouseIn, In, JobIn, ProfileIn, Str
+from ..stats import storage_info, user_totals
 from ..storage import JsonStore
 from ..telegram import esc, notify_user
 from ..uploads import delete_media, save_upload
@@ -70,6 +71,13 @@ WATCHED = ('users', 'jobs', 'houses', 'applications', 'requests', 'courses', 'pr
 @router.get('/crm/changes')
 def changes(store: JsonStore = Depends(get_store)):
     return {'versions': store.versions(*WATCHED), 'serverTime': C.now_iso()}
+
+
+@router.get('/crm/stats/users')
+def user_stats(store: JsonStore = Depends(get_store), settings: Settings = Depends(get_settings)):
+    """Jami foydalanuvchilar = boshlang‘ich hisob (41, eski baza — profillari tiklanmagan) + undan keyin ro‘yxatdan o‘tganlar."""
+    d = store.read_many('meta', 'users')
+    return {**user_totals(d['meta'], d['users'], settings), 'storage': storage_info(settings)}
 
 
 @router.get('/crm/support/tickets')

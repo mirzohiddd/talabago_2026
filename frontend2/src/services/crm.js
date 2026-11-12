@@ -21,33 +21,65 @@ const defaultSettings = () => ({
 export const crmStore = reactive({
   ...Object.fromEntries(Object.keys(SOURCES).map((k) => [k, []])),
   settings: defaultSettings(),
+  /** Jami foydalanuvchilar hisobi: GET /crm/stats/users (41 — eski, tiklanmagan baza + keyin ro‘yxatdan o‘tganlar) */
+  userStats: null,
   loaded: false,
   error: null,
+  /** Yuklanmagan bo‘limlar (masalan, Render uyg‘onayotganda 502) — qolganlari baribir ko‘rsatiladi */
+  failed: [],
   refreshedAt: null,
 })
 
+/** Server sozlamalari eski/to‘liqsiz bo‘lsa ham sahifalar yiqilmasin: standart qiymatlar bilan birlashtirish */
+const mergeSettings = (s) => Object.fromEntries(Object.entries(defaultSettings()).map(([k, v]) => [k, { ...v, ...(s && typeof s[k] === 'object' ? s[k] : {}) }]))
+
 /** Oxirgi yuklangan ma’lumotlarning server o‘zgarish belgilari (live.js shular bilan solishtiradi) */
 export const known = {}
+const RETRY = '__retry__' // yuklanmagan bo‘lim: live.js keyingi tekshiruvda uni qayta yuklaydi
 const getVersions = () => http('/crm/changes').then((r) => r.versions).catch(() => null)
 
-/** Barcha kolleksiyalarni serverdan yuklash (yoki yangilash) */
-export async function refreshCrm() {
-  try {
-    // Belgilar ma’lumotdan OLDIN olinadi: yuklash paytida kelgan o‘zgarish keyingi tekshiruvda albatta ushlanadi
-    const versions = await getVersions()
-    const keys = Object.keys(SOURCES)
-    const [settings, ...lists] = await Promise.all([http('/crm/settings'), ...keys.map((k) => http(SOURCES[k]))])
-    keys.forEach((k, i) => (crmStore[k] = lists[i]))
-    crmStore.settings = settings
-    crmStore.error = null
-    crmStore.refreshedAt = Date.now()
-    if (versions) for (const k of [...keys, 'settings']) known[k] = versions[k]
-  } catch (e) {
-    crmStore.error = e.message
-    if (!crmStore.loaded) throw e
-  } finally {
-    crmStore.loaded = true
+/** Vaqtinchalik xatoda (tarmoq, 5xx — masalan, Render “uyg‘onayotganda”) 2 marta qayta urinadi */
+const transient = (e) => !e?.status || e.status >= 500 || e.status === 429
+async function fetchRetry(path, tries = 3) {
+  for (let i = 0; ; i++) {
+    try {
+      return await http(path)
+    } catch (e) {
+      if (i >= tries - 1 || !transient(e)) throw e
+      await new Promise((r) => setTimeout(r, 1200 * 2 ** i))
+    }
   }
+}
+
+export const refreshUserStats = () => fetchRetry('/crm/stats/users').then((r) => (crmStore.userStats = r)).catch(() => null)
+
+/**
+ * Barcha kolleksiyalarni serverdan yuklash (yoki yangilash).
+ * Har bo‘lim mustaqil: bittasi xato bersa ham qolganlari ko‘rsatiladi (oldin bitta xato barcha sahifalarni bo‘sh qoldirardi).
+ * Hech qachon reject qilmaydi — sahifalardagi “yuklanmoqda” holati doim tugaydi.
+ */
+export async function refreshCrm() {
+  // Belgilar ma’lumotdan OLDIN olinadi: yuklash paytida kelgan o‘zgarish keyingi tekshiruvda albatta ushlanadi
+  const versions = await getVersions()
+  const keys = Object.keys(SOURCES)
+  const [settings, stats, ...lists] = await Promise.allSettled([fetchRetry('/crm/settings'), refreshUserStats(), ...keys.map((k) => fetchRetry(SOURCES[k]))])
+  const failed = []
+  if (settings.status === 'fulfilled') { crmStore.settings = mergeSettings(settings.value); if (versions) known.settings = versions.settings }
+  else { failed.push('settings'); known.settings = RETRY }
+  keys.forEach((k, i) => {
+    const r = lists[i]
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+      crmStore[k] = r.value
+      if (versions) known[k] = versions[k]
+    } else {
+      failed.push(k); known[k] = RETRY
+    }
+  })
+  void stats
+  crmStore.failed = failed
+  crmStore.error = failed.length ? (lists.find((r) => r.status === 'rejected')?.reason?.message || settings.reason?.message || 'Server xatosi') : null
+  crmStore.refreshedAt = Date.now()
+  crmStore.loaded = true
 }
 
 /** Faqat o‘zgargan kolleksiyalarni qayta yuklash (avtomatik yangilanish) */
@@ -56,8 +88,13 @@ export async function refreshCollections(keys, versions) {
   keys.forEach((k) => (known[k] = versions[k]))
   try {
     const data = await Promise.all(keys.map((k) => http(k === 'settings' ? '/crm/settings' : SOURCES[k])))
-    keys.forEach((k, i) => { if (k === 'settings' || SOURCES[k]) crmStore[k] = data[i] })
-    crmStore.error = null
+    keys.forEach((k, i) => {
+      if (k === 'settings') crmStore.settings = mergeSettings(data[i])
+      else if (SOURCES[k] && Array.isArray(data[i])) crmStore[k] = data[i]
+    })
+    if (keys.includes('users')) refreshUserStats()
+    crmStore.failed = crmStore.failed.filter((k) => !keys.includes(k))
+    if (!crmStore.failed.length) crmStore.error = null
     crmStore.refreshedAt = Date.now()
   } catch (e) {
     Object.assign(known, prev) // keyingi tekshiruvda qayta urinadi

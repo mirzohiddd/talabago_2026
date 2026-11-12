@@ -4,13 +4,14 @@
  * Desktop: yig‘iladigan sidebar (ochiq — ikonka + nom, yig‘ilgan — faqat ikonka + tooltip), holat localStorage’da.
  * Mobil: sidebar chapdan chiqadigan drawer. Sessiya muddati kuzatiladi.
  */
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Users, Briefcase, Building2, Megaphone, MessageSquareWarning, Settings, LogOut, Menu, X, Clock, GraduationCap, Inbox, LifeBuoy, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import AppLogo from '@/components/brand/AppLogo.vue'
 import Avatar from '@/components/ui/Avatar.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import { auth, logout, verifySession } from '@/services/auth'
-import { crmStore, ensureCrmLoaded } from '@/services/crm'
+import { crmStore, ensureCrmLoaded, refreshCrm } from '@/services/crm'
 import { startLive, stopLive } from '@/services/live'
 import { useNow } from '@/composables/useNow'
 import { formatTashkent } from '@/utils/tashkentTime'
@@ -66,6 +67,26 @@ onMounted(() => {
 })
 onBeforeUnmount(() => { clearInterval(timer); stopLive() })
 watch(() => route.path, () => (drawer.value = false))
+
+// Sahifa ichidagi kutilmagan xato (chizish / setup / mount) butun ekranni oq qoldirmasin: xato kartasi + qayta yuklash.
+// Tugma bosilgandagi xatolar bu yerda ushlanmaydi — ular odatdagidek toast bo‘lib chiqadi (main.js errorHandler).
+const pageError = ref(null)
+const FATAL = /render function|setup function|mounted hook|beforeMount hook|#runtime-(0|1|bm|m|sp)$/
+onErrorCaptured((err, _inst, info) => {
+  if (!FATAL.test(String(info || ''))) return
+  console.error(err)
+  pageError.value = err?.message || String(err)
+  return false
+})
+watch(() => route.fullPath, () => (pageError.value = null))
+const reloadPage = () => window.location.reload()
+
+// Bo‘limlardan biri yuklanmasa (masalan, server uyg‘onayotganda 502) — ogohlantirish va qayta urinish
+const retrying = ref(false)
+async function retryLoad() {
+  retrying.value = true
+  try { await refreshCrm() } finally { retrying.value = false }
+}
 </script>
 
 <template>
@@ -122,7 +143,17 @@ watch(() => route.path, () => (drawer.value = false))
         </span>
       </header>
       <main class="flex-1 w-full max-w-[1400px] mx-auto px-4 lg:px-8 pt-6 pb-16 min-w-0">
-        <RouterView v-slot="{ Component, route: r }">
+        <div v-if="crmStore.failed.length" class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status" data-testid="load-warning">
+          <span class="flex-1 min-w-[200px]">{{ $t('Ba’zi ma’lumotlar yuklanmadi — server javob bermadi. Qolgan bo‘limlar ishlayapti.') }}</span>
+          <BaseButton size="sm" variant="soft" :loading="retrying" @click="retryLoad">{{ $t('Qayta urinish') }}</BaseButton>
+        </div>
+        <div v-if="pageError" class="crm-card p-8 text-center max-w-lg mx-auto mt-6" role="alert" data-testid="page-error">
+          <h2 class="font-bold text-lg mb-1">{{ $t('Sahifani ochib bo‘lmadi') }}</h2>
+          <p class="text-sm text-muted mb-3">{{ $t('Kutilmagan xato yuz berdi. Sahifani qayta yuklang — muammo takrorlansa, Support’ga xabar bering.') }}</p>
+          <p class="text-xs text-muted mb-5 break-all">{{ pageError }}</p>
+          <BaseButton @click="reloadPage">{{ $t('Qayta yuklash') }}</BaseButton>
+        </div>
+        <RouterView v-else v-slot="{ Component, route: r }">
           <Transition name="page" mode="out-in">
             <component :is="Component" :key="r.meta.viewKey || r.path" />
           </Transition>

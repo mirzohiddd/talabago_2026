@@ -964,4 +964,11 @@ export default {
   "Aloqa ma’lumotlari ko‘rsatilmaydi. So‘rov yuboring — javobni ilovada olasiz.": "Контакты не показываются. Отправьте запрос — ответ придёт в приложении.",
   "E’lon administrator tomonidan yashirilgan. Support bilan bog‘laning": "Объявление скрыто администратором. Свяжитесь с поддержкой",
   "Kelishiladi": "Договорная",
+  "Ba’zi ma’lumotlar yuklanmadi — server javob bermadi. Qolgan bo‘limlar ishlayapti.": "Часть данных не загрузилась — сервер не ответил. Остальные разделы работают.",
+  "Sahifani ochib bo‘lmadi": "Не удалось открыть страницу",
+  "Kutilmagan xato yuz berdi. Sahifani qayta yuklang — muammo takrorlansa, Support’ga xabar bering.": "Произошла непредвиденная ошибка. Перезагрузите страницу — если проблема повторится, сообщите в поддержку.",
+  "Qayta yuklash": "Перезагрузить",
+  "Diqqat: ma’lumotlar doimiy diskda saqlanmayapti.": "Внимание: данные не хранятся на постоянном диске.",
+  "Render’da deploy yoki qayta ishga tushishda foydalanuvchilar va e’lonlar yo‘qolishi mumkin. Render → Disks: /var/data diskini ulang va DATA_DIR=/var/data qiling.": "При деплое или перезапуске на Render пользователи и объявления могут пропасть. Render → Disks: подключите диск /var/data и задайте DATA_DIR=/var/data.",
+  "Jami {total} ta foydalanuvchidan {n} tasining profili eski bazada qolgan va tiklanmagan — rollar faqat bazadagi {db} ta foydalanuvchi bo‘yicha.": "Из {total} пользователей профили {n} остались в старой базе и не восстановлены — роли посчитаны только по {db} пользователям в базе.",
 }

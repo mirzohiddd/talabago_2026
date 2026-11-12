@@ -18,7 +18,7 @@ import { t, date } from '@/i18n'
 const router = useRouter()
 const now = useNow()
 const loading = ref(!crmStore.loaded)
-Promise.all([ensureCrmLoaded(), ensureAdsLoaded()]).then(() => (loading.value = false))
+Promise.allSettled([ensureCrmLoaded(), ensureAdsLoaded()]).then(() => (loading.value = false))
 
 const period = ref('week')
 const periodOpts = computed(() => [{ value: 'today', label: t('Bugun') }, { value: 'week', label: t('Hafta') }, { value: 'month', label: t('Oy') }])
@@ -31,11 +31,23 @@ const inPeriod = (x) => Date.parse(x.createdAt) >= since.value
 const c = (list, fn = () => true) => crmStore[list].filter(fn)
 const hintNew = computed(() => ({ today: t('bugun'), week: t('shu hafta'), month: t('shu oy') }[period.value]))
 
+// Jami foydalanuvchilar = boshlang‘ich hisob (41 — yo‘qolgan eski baza, profillari tiklanmagan) + undan keyin ro‘yxatdan o‘tgan
+// haqiqiy foydalanuvchilar (bazadagi yozuvlar, live yangilanadi). Rollar, haftalik grafik — faqat bazadagi haqiqiy yozuvlardan.
+const userTotal = computed(() => {
+  const s = crmStore.userStats
+  const since = Date.parse(s?.since)
+  if (!s || !Number.isFinite(since)) return crmStore.users.length
+  const fresh = crmStore.users.filter((u) => Date.parse(u.createdAt) > since).length
+  return Math.max(s.baseline || 0, s.existingAtStart || 0) + fresh
+})
+const unrecovered = computed(() => crmStore.userStats?.unrecovered || 0)
+const storageAtRisk = computed(() => crmStore.userStats?.storage?.persistent === false)
+
 const kpis = computed(() => {
   const role = (r) => (u) => u.role === r
   const liveAds = adsStore.items.filter((a) => adState(a, now.value) === 'live')
   return [
-    { label: t('Jami foydalanuvchilar'), value: c('users').length, delta: c('users', inPeriod).length, icon: Users, tone: 'brand', to: '/users' },
+    { label: t('Jami foydalanuvchilar'), value: userTotal.value, delta: c('users', inPeriod).length, icon: Users, tone: 'brand', to: '/users' },
     { label: t('Talabalar'), value: c('users', role('student')).length, delta: c('users', (u) => u.role === 'student' && inPeriod(u)).length, icon: GraduationCap, to: { path: '/users', query: { role: 'student' } } },
     { label: t('Ish beruvchilar'), value: c('users', role('employer')).length, delta: c('users', (u) => u.role === 'employer' && inPeriod(u)).length, icon: Briefcase, to: { path: '/users', query: { role: 'employer' } } },
     { label: t('Uy egalari'), value: c('users', role('landlord')).length, delta: c('users', (u) => u.role === 'landlord' && inPeriod(u)).length, icon: KeyRound, to: { path: '/users', query: { role: 'landlord' } } },
@@ -89,6 +101,9 @@ const userOf = (id) => crmStore.users.find((u) => u.id === id)
       <SegmentedControl v-model="period" :options="periodOpts" class="w-full sm:w-72" data-testid="period" />
     </PageHeader>
 
+    <div v-if="storageAtRisk" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert" data-testid="storage-warning">
+      <b>{{ $t('Diqqat: ma’lumotlar doimiy diskda saqlanmayapti.') }}</b> {{ $t('Render’da deploy yoki qayta ishga tushishda foydalanuvchilar va e’lonlar yo‘qolishi mumkin. Render → Disks: /var/data diskini ulang va DATA_DIR=/var/data qiling.') }}
+    </div>
     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3 stagger">
       <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" :loading="loading" />
     </div>
@@ -112,6 +127,7 @@ const userOf = (id) => crmStore.users.find((u) => u.id === id)
             </button>
           </li>
         </ul>
+        <p v-if="unrecovered" class="mt-4 text-xs text-muted leading-relaxed" data-testid="legacy-note">{{ $t('Jami {total} ta foydalanuvchidan {n} tasining profili eski bazada qolgan va tiklanmagan — rollar faqat bazadagi {db} ta foydalanuvchi bo‘yicha.', { total: userTotal, n: unrecovered, db: crmStore.users.length }) }}</p>
       </section>
     </div>
 

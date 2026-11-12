@@ -964,4 +964,11 @@ export default {
   "Aloqa ma’lumotlari ko‘rsatilmaydi. So‘rov yuboring — javobni ilovada olasiz.": "Contacts are not shown. Send a request — you will get the reply in the app.",
   "E’lon administrator tomonidan yashirilgan. Support bilan bog‘laning": "The listing was hidden by an administrator. Please contact support",
   "Kelishiladi": "Negotiable",
+  "Ba’zi ma’lumotlar yuklanmadi — server javob bermadi. Qolgan bo‘limlar ishlayapti.": "Some data failed to load — the server did not respond. Other sections still work.",
+  "Sahifani ochib bo‘lmadi": "Could not open the page",
+  "Kutilmagan xato yuz berdi. Sahifani qayta yuklang — muammo takrorlansa, Support’ga xabar bering.": "An unexpected error occurred. Reload the page — if it happens again, contact support.",
+  "Qayta yuklash": "Reload",
+  "Diqqat: ma’lumotlar doimiy diskda saqlanmayapti.": "Warning: data is not stored on a persistent disk.",
+  "Render’da deploy yoki qayta ishga tushishda foydalanuvchilar va e’lonlar yo‘qolishi mumkin. Render → Disks: /var/data diskini ulang va DATA_DIR=/var/data qiling.": "Users and listings may be lost on a Render deploy or restart. Render → Disks: attach a disk at /var/data and set DATA_DIR=/var/data.",
+  "Jami {total} ta foydalanuvchidan {n} tasining profili eski bazada qolgan va tiklanmagan — rollar faqat bazadagi {db} ta foydalanuvchi bo‘yicha.": "Of {total} users, {n} profiles stayed in the old database and were not restored — roles are counted only from the {db} users in the database.",
 }

@@ -19,6 +19,7 @@ from . import common as C
 from .config import Settings, get_settings
 from .deps import get_store
 from .routers import admin, auth, content, listings, users
+from .stats import ensure_user_baseline
 from .storage import StorageError
 from .telegram import handle_update
 
@@ -116,7 +117,8 @@ def sync_env_admin(settings: Settings, db: dict) -> str | None:
 def bootstrap(settings: Settings) -> None:
     """Ishga tushish: administrator (muhitdagi xeshdan) va boshlang‘ich kurs kontenti."""
     store = get_store(settings)
-    with store.tx('admins', 'courses', 'meta') as db:
+    with store.tx('admins', 'courses', 'meta', 'users') as db:
+        ensure_user_baseline(db, settings)  # foydalanuvchilar boshlang‘ich hisobi (41) — bir marta, meta.json’da doimiy
         result = sync_env_admin(settings, db)
         if result == 'created':
             log.info('Administrator yaratildi: %s', settings.ADMIN_USERNAME)

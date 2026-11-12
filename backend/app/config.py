@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     BACKUP_KEEP: int = 30
     BACKUP_INTERVAL_SECONDS: int = 300
 
+    # --- Foydalanuvchilar statistikasi (app/stats.py) ---
+    # Yo‘qolgan eski bazadagi haqiqiy foydalanuvchilar soni (profillari tiklanmagan, soxta profil yaratilmaydi).
+    USERS_BASELINE: int = 41
+    # Boshlang‘ich payt (ISO, UTC). Bo‘sh bo‘lsa — birinchi ishga tushishda belgilanib meta.json’ga yoziladi.
+    USERS_BASELINE_AT: str = ''
+
     # --- Birinchi administrator (faqat adminlar ro‘yxati bo‘sh bo‘lsa ishlatiladi) ---
     ADMIN_USERNAME: str = ''
     ADMIN_PASSWORD_HASH: str = ''  # python -m app.cli hash-password bilan olinadi
