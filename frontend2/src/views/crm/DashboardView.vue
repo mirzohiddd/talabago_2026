@@ -31,17 +31,7 @@ const inPeriod = (x) => Date.parse(x.createdAt) >= since.value
 const c = (list, fn = () => true) => crmStore[list].filter(fn)
 const hintNew = computed(() => ({ today: t('bugun'), week: t('shu hafta'), month: t('shu oy') }[period.value]))
 
-// Jami foydalanuvchilar = boshlang‘ich hisob (41 — yo‘qolgan eski baza, profillari tiklanmagan) + undan keyin ro‘yxatdan o‘tgan
-// haqiqiy foydalanuvchilar (bazadagi yozuvlar, live yangilanadi). Rollar, haftalik grafik — faqat bazadagi haqiqiy yozuvlardan.
-const userTotal = computed(() => {
-  const s = crmStore.userStats
-  const since = Date.parse(s?.since)
-  if (!s || !Number.isFinite(since)) return crmStore.users.length
-  const fresh = crmStore.users.filter((u) => Date.parse(u.createdAt) > since).length
-  return Math.max(s.baseline || 0, s.existingAtStart || 0) + fresh
-})
-const unrecovered = computed(() => crmStore.userStats?.unrecovered || 0)
-const storageAtRisk = computed(() => crmStore.userStats?.storage?.persistent === false)
+const userTotal = computed(() => crmStore.users.length)
 
 const kpis = computed(() => {
   const role = (r) => (u) => u.role === r
@@ -101,9 +91,7 @@ const userOf = (id) => crmStore.users.find((u) => u.id === id)
       <SegmentedControl v-model="period" :options="periodOpts" class="w-full sm:w-72" data-testid="period" />
     </PageHeader>
 
-    <div v-if="storageAtRisk" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert" data-testid="storage-warning">
-      <b>{{ $t('Diqqat: ma’lumotlar doimiy diskda saqlanmayapti.') }}</b> {{ $t('Render’da deploy yoki qayta ishga tushishda foydalanuvchilar va e’lonlar yo‘qolishi mumkin. Render → Disks: /var/data diskini ulang va DATA_DIR=/var/data qiling.') }}
-    </div>
+
     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3 stagger">
       <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" :loading="loading" />
     </div>
