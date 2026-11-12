@@ -4,8 +4,9 @@ export const money = (n) => new Intl.NumberFormat('ru-RU').format(n || 0).replac
 
 const PERIOD_SHORT = { hour: 'soat', day: 'kun', week: 'hafta', month: 'oy' }
 /** “25 000 so‘m / soat” */
-export const salaryText = (j) => `${money(j.salary)} ${t('so‘m')} / ${t(PERIOD_SHORT[j.salaryPeriod] || 'oy')}`
-export const priceText = (h) => `${money(h.price)} ${t('so‘m')} / ${t('oy')}`
+/** Maosh noma’lum bo‘lsa (admin e’loni) — “Kelishiladi” */
+export const salaryText = (j) => (j.salaryNegotiable || j.salary == null ? t('Kelishiladi') : `${money(j.salary)} ${t('so‘m')} / ${t(PERIOD_SHORT[j.salaryPeriod] || 'oy')}`)
+export const priceText = (h) => (h.priceNegotiable || h.price == null ? t('Kelishiladi') : `${money(h.price)} ${t('so‘m')} / ${t('oy')}`)
 
 export const initials = (name = '') =>
   name.split(' ').filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase() || 'T'

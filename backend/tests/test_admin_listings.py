@@ -188,3 +188,53 @@ def test_legacy_records_without_new_fields_still_work(client, admin, app):
     pub = next(j for j in client.get(API + '/jobs', headers=sh).json() if j['id'] == job['id'])
     assert 'verified' not in pub and pub['phone'] == job['phone'] and pub['employerId'] == job['employerId']
     assert store is None or all('createdBy' not in j for j in store.read('jobs') if j['id'] == job['id'])
+
+
+# ============================================================ ixtiyoriy maydonlar va “Kelishiladi”
+def test_minimal_admin_job_negotiable_salary(client, admin):
+    r = admin.post(API + '/crm/jobs', json={'title': 'Laborant yordamchisi', 'type': 'permanent', 'source': SRC})
+    assert r.status_code == 201, r.text
+    j = r.json()
+    assert j['salary'] is None and j['salaryNegotiable'] is True and j['status'] == 'pending' and j['company'] == '' and j['description'] == ''
+    # maosh berilsa — “Kelishiladi” emas; 0 / bo‘sh qiymat — “Kelishiladi”
+    j2 = admin.post(API + '/crm/jobs', json={'title': 'Kassir', 'type': 'daily', 'salary': 150000, 'salaryPeriod': 'day', 'source': SRC}).json()
+    assert j2['salary'] == 150000 and j2['salaryNegotiable'] is False
+    assert admin.post(API + '/crm/jobs', json={'title': 'Kassir 2', 'type': 'daily', 'salary': '', 'source': SRC}).json()['salaryNegotiable'] is True
+    assert admin.post(API + '/crm/jobs', json={'title': 'Kassir 3', 'type': 'daily', 'salary': 500, 'salaryNegotiable': True, 'source': SRC}).json()['salary'] is None
+    # majburiy maydonlar: lavozim va manba
+    assert admin.post(API + '/crm/jobs', json={'type': 'daily', 'source': SRC}).status_code == 422
+    assert admin.post(API + '/crm/jobs', json={'title': 'Kassir', 'type': 'daily'}).status_code == 422
+    assert admin.post(API + '/crm/jobs', json={'title': 'Kassir', 'type': 'daily', 'salary': -5, 'source': SRC}).status_code == 422
+    # nashr → talabaga ko‘rinadi; maosh filtri “Kelishiladi”ni chiqarmaydi, xato bermaydi
+    admin.patch(API + f'/crm/jobs/{j["id"]}', json={'verification': OK})
+    assert admin.post(API + f'/crm/jobs/{j["id"]}/approve').status_code == 200
+    h, _, _ = register(client)
+    assert any(x['id'] == j['id'] and x['salaryNegotiable'] for x in client.get(API + '/jobs', headers=h).json())
+    r = client.get(API + '/jobs?salary=3', headers=h)
+    assert r.status_code == 200 and all(x['id'] != j['id'] for x in r.json())
+    # tahrirlash: maosh kiritildi → bayroq tushadi; bo‘shatildi → yana “Kelishiladi”
+    assert admin.patch(API + f'/crm/jobs/{j["id"]}', json={'salary': 4_000_000}).json()['salaryNegotiable'] is False
+    x = admin.patch(API + f'/crm/jobs/{j["id"]}', json={'salary': None}).json()
+    assert x['salary'] is None and x['salaryNegotiable'] is True
+
+
+def test_minimal_admin_house_negotiable_price(client, admin):
+    r = admin.post(API + '/crm/houses', json={'title': 'Ijaraga xona', 'type': 'room', 'district': 'Chilonzor', 'source': SRC,
+                                             'verification': OK, 'publish': True})
+    assert r.status_code == 201, r.text
+    hs = r.json()
+    assert hs['price'] is None and hs['priceNegotiable'] is True and hs['photos'] == [] and hs['status'] == 'active'
+    assert admin.post(API + '/crm/houses', json={'title': 'Xona', 'type': 'room', 'source': SRC}).status_code == 422   # tuman majburiy
+    h, _, _ = register(client)
+    assert any(x['id'] == hs['id'] for x in client.get(API + '/houses', headers=h).json())
+    r = client.get(API + '/houses?price=2', headers=h)
+    assert r.status_code == 200 and all(x['id'] != hs['id'] for x in r.json())
+
+
+def test_owner_listing_still_requires_salary(client, admin):
+    eh, _, _ = register(client, 'employer')
+    assert client.post(API + '/employer/jobs', json={**JOB, 'salary': None}, headers=eh).status_code == 422
+    job = client.post(API + '/employer/jobs', json=JOB, headers=eh).json()
+    assert admin.patch(API + f'/crm/jobs/{job["id"]}', json={'salary': ''}).status_code == 422
+    assert admin.patch(API + f'/crm/jobs/{job["id"]}', json={'salaryNegotiable': True}).status_code == 422
+    assert admin.patch(API + f'/crm/jobs/{job["id"]}', json={'salary': 30000}).json()['salary'] == 30000

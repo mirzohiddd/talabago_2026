@@ -5,7 +5,7 @@ import json
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from .. import common as C
 from ..config import Settings, get_settings
@@ -141,11 +141,40 @@ class AdminListingMeta(In):
 
 
 class AdminJobIn(JobIn, AdminListingMeta):
+    """Admin e’loni: majburiy faqat lavozim, ish turi va manba. Qolganlari (maosh, kompaniya, tavsif, aloqa...) ixtiyoriy."""
+    company: Str(120) = ''
+    format: Literal[C.JOB_FORMATS] = 'offline'
+    salary: int | None = Field(None, gt=0, le=1_000_000_000)
+    salaryPeriod: Literal[C.SALARY_PERIODS] = 'month'
+    salaryNegotiable: bool = False          # “Kelishiladi” — maosh noma’lum
+    description: Str(3000) = ''
     address: Str(200) = ''
+
+    _s = field_validator('salary', mode='before')(classmethod(lambda cls, v: None if v in ('', 0, '0') else v))
+
+    @model_validator(mode='after')
+    def _negotiable(self):
+        if self.salaryNegotiable or self.salary is None:
+            self.salary, self.salaryNegotiable = None, True
+        return self
 
 
 class AdminHouseIn(HouseIn, AdminListingMeta):
-    photos: list[Str(300)] = Field(min_length=1, max_length=10)   # Telegram e’lonlarida rasm kamroq bo‘lishi mumkin
+    """Admin turar joy e’loni: majburiy faqat nom, turi, tuman va manba. Narx noma’lum bo‘lsa — “Kelishiladi”."""
+    photos: list[Str(300)] = Field(default_factory=list, max_length=10)   # Telegram e’lonlarida rasm bo‘lmasligi mumkin
+    address: Str(200) = ''
+    rooms: int = Field(1, ge=1, le=20)
+    price: int | None = Field(None, gt=0, le=1_000_000_000)
+    priceNegotiable: bool = False
+    description: Str(3000) = ''
+
+    _p = field_validator('price', mode='before')(classmethod(lambda cls, v: None if v in ('', 0, '0') else v))
+
+    @model_validator(mode='after')
+    def _negotiable(self):
+        if self.priceNegotiable or self.price is None:
+            self.price, self.priceNegotiable = None, True
+        return self
 
 
 def _publishable(verification: dict | None) -> bool:
@@ -164,12 +193,13 @@ def _verification(v: VerificationIn | dict, admin: dict, prev: dict | None = Non
 
 EDITABLE = {
     'jobs': {'title', 'company', 'salary', 'salaryPeriod', 'district', 'city', 'schedule', 'category', 'description', 'type', 'format', 'workTime', 'phone', 'telegram',
-             'address', 'requirements', 'contactName'},
+             'address', 'requirements', 'contactName', 'salaryNegotiable'},
     'houses': {'title', 'price', 'district', 'city', 'address', 'rooms', 'freeSpots', 'capacity', 'description', 'type', 'audience', 'occupancy', 'phone', 'telegram',
-               'amenities', 'photos', 'area', 'contactName'},
+               'amenities', 'photos', 'area', 'contactName', 'priceNegotiable'},
 }
 LIST_FIELDS = {'requirements': (20, 200), 'amenities': (20, 40), 'photos': (10, 300)}
 NUMERIC = {'salary', 'price', 'rooms', 'freeSpots', 'capacity'}
+NEGOTIABLE = {'salary': 'salaryNegotiable', 'price': 'priceNegotiable'}   # bo‘sh qiymat → “Kelishiladi” (faqat admin e’lonida)
 
 
 def _moderation(coll: str, owner_key: str, label: str, link: str):
@@ -229,6 +259,10 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
                         v = float(v) if v not in (None, '') else None
                     except (TypeError, ValueError) as e:
                         raise HTTPException(422, 'area: son kiriting') from e
+                elif k in ('salaryNegotiable', 'priceNegotiable'):
+                    v = bool(v)
+                elif k in NEGOTIABLE and v in (None, '', 0, '0'):
+                    v = None                                   # tekshiruv pastda: faqat admin e’lonida ruxsat
                 elif k in NUMERIC:
                     try:
                         v = int(v)
@@ -247,6 +281,17 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
                 item['verification'] = _verification(meta['verification'], admin, item.get('verification'))
             if clean.get('status') == 'active':
                 _guard_publish(item)
+            for num, flag in NEGOTIABLE.items():
+                if num not in clean and flag not in clean:
+                    continue
+                if not C.is_admin_listing(item):           # egasining e’lonida maosh/narx majburiy (eski qoida)
+                    if clean.get(num) is None and num in clean or clean.get(flag):
+                        raise HTTPException(422, f'{num}: son kiriting')
+                    continue
+                if clean.get(flag) or (num in clean and clean[num] is None):
+                    clean[num], clean[flag] = None, True
+                elif num in clean:
+                    clean[flag] = False
             item.update(clean, updatedAt=C.now_iso())
             if clean.get('status') == 'active' and not item.get('approvedAt'):
                 item['approvedAt'] = C.now_iso()

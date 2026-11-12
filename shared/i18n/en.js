@@ -963,4 +963,5 @@ export default {
   "Aloqa ma’lumotlari ko‘rsatilmaydi. Ariza yuboring — javobni ilovada olasiz.": "Contacts are not shown. Apply — you will get the reply in the app.",
   "Aloqa ma’lumotlari ko‘rsatilmaydi. So‘rov yuboring — javobni ilovada olasiz.": "Contacts are not shown. Send a request — you will get the reply in the app.",
   "E’lon administrator tomonidan yashirilgan. Support bilan bog‘laning": "The listing was hidden by an administrator. Please contact support",
+  "Kelishiladi": "Negotiable",
 }

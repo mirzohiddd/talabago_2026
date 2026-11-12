@@ -4,6 +4,8 @@
  * Telegram kanal/guruhdan olingan, egasi bilan tekshirilgan e’lonlar uchun:
  *   asosiy ma’lumotlar + manba (source) + tekshiruv va rozilik (verification) + “darhol nashr qilish”.
  * Nashr faqat “egasi bilan bog‘lanildi” va “egasi rozi” belgilanganda mumkin (server ham tekshiradi).
+ * Majburiy (*): lavozim / e’lon nomi, ish yoki uy turi, (uy uchun) tuman va manba nomi. Qolgan barcha maydonlar ixtiyoriy;
+ * maosh yoki narx noma’lum bo‘lsa — “Kelishiladi”. Tekshiruvsiz e’lon “Tasdiqlashni kutmoqda” holatida saqlanadi.
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { ImagePlus, X, Send, ShieldCheck, Link2, Loader2 } from 'lucide-vue-next'
@@ -38,16 +40,17 @@ const SOURCE_TYPES = [
 const METHODS = [{ value: 'phone', label: 'Telefon qo‘ng‘irog‘i' }, { value: 'telegram', label: 'Telegram yozishma' }, { value: 'in_person', label: 'Shaxsan' }, { value: 'other', label: 'Boshqa' }]
 const opts = (arr) => arr.map((o) => ({ value: o.value, label: t(o.label) }))
 
+const editingItem = (s) => !!s.id
 function blank() {
   const s = props.item || {}
   const v = s.verification || {}
   const src = s.source || {}
   return {
     title: s.title || '', company: s.company || '', type: s.type || (isJob.value ? 'hourly' : 'flat'), format: s.format || 'offline',
-    salary: s.salary ?? '', salaryPeriod: s.salaryPeriod || 'hour', workTime: s.workTime || 'flexible', schedule: s.schedule || '',
+    salary: s.salary ?? '', salaryPeriod: s.salaryPeriod || 'month', salaryNegotiable: editingItem(s) ? !!(s.salaryNegotiable || s.salary == null) : false, workTime: s.workTime || 'flexible', schedule: s.schedule || '',
     city: s.city || 'Toshkent', district: s.district || '', address: s.address || '', requirementsText: (s.requirements || []).join('\n'),
     description: s.description || '', phone: s.phone || '', telegram: (s.telegram || '').replace(/^@/, ''), contactName: s.contactName || '',
-    price: s.price ?? '', rooms: s.rooms ?? 1, capacity: s.capacity ?? 1, freeSpots: s.freeSpots ?? 1, area: s.area ?? '', audience: s.audience || 'any',
+    price: s.price ?? '', priceNegotiable: editingItem(s) ? !!(s.priceNegotiable || s.price == null) : false, rooms: s.rooms ?? 1, capacity: s.capacity ?? 1, freeSpots: s.freeSpots ?? 1, area: s.area ?? '', audience: s.audience || 'any',
     amenities: [...(s.amenities || [])], photos: [...(s.photos || [])],
     srcType: src.type || 'telegram_channel', srcName: src.name || '', srcUrl: src.url || '', srcPostedAt: src.postedAt || '',
     ownerContacted: !!v.ownerContacted, ownerConsent: !!v.ownerConsent, phoneConsent: !!v.phoneConsent, method: v.method || 'phone', note: v.note || '',
@@ -67,21 +70,21 @@ watch(canPublish, (v) => { if (!v) form.publish = false })
 function validate() {
   Object.keys(errors).forEach((k) => delete errors[k])
   const need = (k, ok, msg = t('Majburiy maydon')) => { if (!ok) errors[k] = msg }
-  need('title', form.title.trim().length >= 3)
-  need('description', form.description.trim().length >= 20, t('Kamida 20 ta belgi'))
+  // majburiy — faqat eng zarurlari
+  need('title', form.title.trim().length >= 3, form.title.trim() ? t('Kamida 3 ta belgi') : t('Majburiy maydon'))
   need('srcName', form.srcName.trim().length >= 2, t('Manba nomini yozing (kanal / guruh)'))
+  if (!isJob.value) need('district', !!form.district)
+  // ixtiyoriy — faqat to‘ldirilgan bo‘lsa tekshiriladi
   if (form.srcUrl && !/^https?:\/\//.test(form.srcUrl)) errors.srcUrl = t('Havola https:// bilan boshlansin')
   const pp = phoneProblem(form.phone)
   if (form.phone && pp && pp !== 'empty') errors.phone = t(PHONE_MESSAGES[pp])
-  if (isJob.value) {
-    need('company', form.company.trim().length >= 2)
-    need('salary', +form.salary > 0, t('Maoshni kiriting'))
-    if (form.format === 'offline') need('district', !!form.district)
-  } else {
-    need('price', +form.price > 0, t('Narxni kiriting'))
-    need('district', !!form.district)
-    need('address', form.address.trim().length >= 2)
-    need('photos', form.photos.length >= 1, t('Kamida 1 ta rasm yuklang'))
+  const num = (k, neg) => { if (!form[neg] && form[k] !== '' && form[k] != null && !(+form[k] > 0)) errors[k] = t('Musbat son kiriting yoki “Kelishiladi”ni tanlang') }
+  if (isJob.value) num('salary', 'salaryNegotiable')
+  else {
+    num('price', 'priceNegotiable')
+    for (const k of ['rooms', 'capacity']) if (form[k] !== '' && !(+form[k] >= 1)) errors[k] = t('Kamida 1')
+    if (form.freeSpots !== '' && !(+form.freeSpots >= 0)) errors.freeSpots = t('Manfiy bo‘lmasin')
+    if (form.area !== '' && form.area != null && !(+form.area > 0)) errors.area = t('Musbat son kiriting')
   }
   return !Object.keys(errors).length
 }
@@ -96,12 +99,20 @@ function payload() {
     verification: { ownerContacted: form.ownerContacted, ownerConsent: form.ownerConsent, phoneConsent: form.phoneConsent, method: form.method, note: form.note.trim() },
   }
   const body = isJob.value
-    ? { ...common, company: form.company.trim(), type: form.type, format: form.format, salary: +form.salary, salaryPeriod: form.salaryPeriod, workTime: form.workTime,
-        schedule: form.schedule.trim(), district: form.format === 'online' ? null : form.district, address: form.address.trim(),
+    ? { ...common, company: form.company.trim(), type: form.type, format: form.format, workTime: form.workTime,
+        salary: form.salaryNegotiable || form.salary === '' ? null : +form.salary, salaryNegotiable: form.salaryNegotiable || form.salary === '', salaryPeriod: form.salaryPeriod,
+        schedule: form.schedule.trim(), district: form.format === 'online' ? null : form.district || null, address: form.address.trim(),
         requirements: form.requirementsText.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 20) }
-    : { ...common, type: form.type, price: +form.price, district: form.district, address: form.address.trim(), rooms: +form.rooms, capacity: +form.capacity,
-        freeSpots: +form.freeSpots, area: form.area === '' ? null : +form.area, audience: form.audience, amenities: form.amenities, photos: form.photos }
+    : { ...common, type: form.type, price: form.priceNegotiable || form.price === '' ? null : +form.price, priceNegotiable: form.priceNegotiable || form.price === '',
+        district: form.district, address: form.address.trim(), rooms: +form.rooms || 1, capacity: +form.capacity || 1,
+        freeSpots: form.freeSpots === '' ? 1 : +form.freeSpots, area: form.area === '' ? null : +form.area, audience: form.audience, amenities: form.amenities, photos: form.photos }
   return { ...body, ...meta }
+}
+
+function toggleNego(k) {
+  const f = k + 'Negotiable'
+  form[f] = !form[f]
+  if (form[f]) { form[k] = ''; delete errors[k] }
 }
 
 async function addPhotos(e) {
@@ -145,26 +156,36 @@ async function save() {
       <section class="grid sm:grid-cols-2 gap-4">
         <BaseInput v-model="form.title" :label="isJob ? $t('Lavozim') : $t('E’lon nomi')" :error="errors.title" required class="sm:col-span-2" data-testid="al-title" />
         <template v-if="isJob">
-          <BaseInput v-model="form.company" :label="$t('Ish joyi / kompaniya')" :error="errors.company" required data-testid="al-company" />
-          <BaseSelect v-model="form.type" :label="$t('Ish turi')" :options="opts(JOB_TYPES)" />
-          <BaseInput v-model="form.salary" type="number" min="1" :label="$t('Maosh (so‘m)')" :error="errors.salary" required data-testid="al-salary" />
-          <BaseSelect v-model="form.salaryPeriod" :label="$t('Maosh davri')" :options="opts(SALARY_PERIODS)" />
+          <BaseInput v-model="form.company" :label="$t('Ish joyi / kompaniya')" :placeholder="$t('Ixtiyoriy')" :error="errors.company" data-testid="al-company" />
+          <BaseSelect v-model="form.type" :label="$t('Ish turi')" :options="opts(JOB_TYPES)" required />
+          <div class="sm:col-span-2">
+            <div class="flex items-end gap-2">
+              <BaseInput v-model="form.salary" type="number" inputmode="numeric" min="1" :label="$t('Maosh (so‘m)')" :error="errors.salary" :disabled="form.salaryNegotiable"
+                :placeholder="form.salaryNegotiable ? $t('Kelishiladi') : $t('Ixtiyoriy')" class="flex-1 min-w-0" data-testid="al-salary" />
+              <BaseSelect v-if="!form.salaryNegotiable" v-model="form.salaryPeriod" :options="opts(SALARY_PERIODS)" class="w-32 sm:w-40 shrink-0" :aria-label="$t('Maosh davri')" />
+            </div>
+            <button type="button" :class="['nego', form.salaryNegotiable ? 'bg-brand text-white border-brand' : 'bg-white border-line hover:border-brand']" :aria-pressed="form.salaryNegotiable" data-testid="al-salary-nego" @click="toggleNego('salary')">{{ $t('Kelishiladi') }}</button>
+          </div>
           <BaseSelect v-model="form.workTime" :label="$t('Ish vaqti')" :options="opts(WORK_TIMES)" />
           <BaseInput v-model="form.schedule" :label="$t('Ish jadvali')" :placeholder="$t('Masalan: Du–Ju, 18:00–23:00')" data-testid="al-schedule" />
           <BaseSelect v-model="form.format" :label="$t('Format')" :options="opts(JOB_FORMATS)" />
         </template>
         <template v-else>
-          <BaseSelect v-model="form.type" :label="$t('Turar joy turi')" :options="opts(HOUSE_TYPES)" />
-          <BaseInput v-model="form.price" type="number" min="1" :label="$t('Oylik narx (so‘m)')" :error="errors.price" required data-testid="al-price" />
-          <BaseInput v-model="form.rooms" type="number" min="1" :label="$t('Xonalar soni')" data-testid="al-rooms" />
-          <BaseInput v-model="form.area" type="number" min="1" :label="$t('Maydoni (m²)')" />
-          <BaseInput v-model="form.capacity" type="number" min="1" :label="$t('Necha kishilik')" />
-          <BaseInput v-model="form.freeSpots" type="number" min="0" :label="$t('Bo‘sh joylar')" />
+          <BaseSelect v-model="form.type" :label="$t('Turar joy turi')" :options="opts(HOUSE_TYPES)" required />
+          <div>
+            <BaseInput v-model="form.price" type="number" inputmode="numeric" min="1" :label="$t('Oylik narx (so‘m)')" :error="errors.price" :disabled="form.priceNegotiable"
+              :placeholder="form.priceNegotiable ? $t('Kelishiladi') : $t('Ixtiyoriy')" data-testid="al-price" />
+            <button type="button" :class="['nego', form.priceNegotiable ? 'bg-brand text-white border-brand' : 'bg-white border-line hover:border-brand']" :aria-pressed="form.priceNegotiable" data-testid="al-price-nego" @click="toggleNego('price')">{{ $t('Kelishiladi') }}</button>
+          </div>
+          <BaseInput v-model="form.rooms" type="number" inputmode="numeric" min="1" :label="$t('Xonalar soni')" :error="errors.rooms" data-testid="al-rooms" />
+          <BaseInput v-model="form.area" type="number" inputmode="numeric" min="1" :label="$t('Maydoni (m²)')" :placeholder="$t('Ixtiyoriy')" :error="errors.area" />
+          <BaseInput v-model="form.capacity" type="number" inputmode="numeric" min="1" :label="$t('Necha kishilik')" :error="errors.capacity" />
+          <BaseInput v-model="form.freeSpots" type="number" inputmode="numeric" min="0" :label="$t('Bo‘sh joylar')" :error="errors.freeSpots" />
           <BaseSelect v-model="form.audience" :label="$t('Kim uchun')" :options="opts(AUDIENCES)" />
         </template>
         <BaseSelect v-model="form.city" :label="$t('Shahar')" :options="CITY_LIST.map((c) => ({ value: c, label: $t(c) }))" @update:model-value="form.district = ''" />
-        <BaseSelect v-if="!isJob || form.format === 'offline'" v-model="form.district" :label="$t('Tuman')" :placeholder="$t('Tanlang')" :options="districts" :error="errors.district" :required="!isJob || form.format === 'offline'" data-testid="al-district" />
-        <BaseInput v-model="form.address" :label="$t('Manzil')" :error="errors.address" :required="!isJob" class="sm:col-span-2" data-testid="al-address" />
+        <BaseSelect v-if="!isJob || form.format === 'offline'" v-model="form.district" :label="$t('Tuman')" :placeholder="$t('Tanlang')" :options="districts" :error="errors.district" :required="!isJob" data-testid="al-district" />
+        <BaseInput v-model="form.address" :label="$t('Manzil')" :placeholder="$t('Ixtiyoriy')" :error="errors.address" class="sm:col-span-2" data-testid="al-address" />
         <BaseTextarea v-if="isJob" v-model="form.requirementsText" :label="$t('Talablar (har biri yangi qatorda)')" :rows="3" class="sm:col-span-2" data-testid="al-req" />
         <div v-else class="sm:col-span-2">
           <p class="label">{{ $t('Sharoitlar') }}</p>
@@ -173,12 +194,12 @@ async function save() {
               @click="form.amenities = form.amenities.includes(a) ? form.amenities.filter((x) => x !== a) : [...form.amenities, a]">{{ $t(a) }}</button>
           </div>
         </div>
-        <BaseTextarea v-model="form.description" :label="$t('Tavsif')" :rows="4" :error="errors.description" required class="sm:col-span-2" data-testid="al-desc" />
+        <BaseTextarea v-model="form.description" :label="$t('Tavsif')" :placeholder="$t('Ixtiyoriy')" :rows="4" :error="errors.description" class="sm:col-span-2" data-testid="al-desc" />
       </section>
 
       <!-- Rasmlar -->
       <section v-if="!isJob">
-        <p class="label">{{ $t('Rasmlar') }} <span class="text-muted font-normal">({{ form.photos.length }}/10)</span></p>
+        <p class="label">{{ $t('Rasmlar') }} <span class="text-muted font-normal">({{ form.photos.length }}/10 · {{ $t('ixtiyoriy') }})</span></p>
         <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
           <div v-for="(p, i) in form.photos" :key="p" class="relative">
             <MediaImg :src="p" class="w-full aspect-[4/3] object-cover rounded-xl bg-brand-50" />
@@ -230,7 +251,13 @@ async function save() {
       </label>
     </form>
     <template #footer>
+      <p v-if="!editing && !form.publish" class="text-xs text-muted text-center mb-2">{{ $t('E’lon “Tasdiqlashni kutmoqda” holatida saqlanadi — tekshiruvdan so‘ng ro‘yxatdan tasdiqlaysiz.') }}</p>
       <BaseButton block :loading="busy" data-testid="al-save" @click="save">{{ editing ? $t('Saqlash') : form.publish ? $t('Nashr qilish') : $t('Saqlash (tasdiqlashni kutadi)') }}</BaseButton>
     </template>
   </BaseModal>
 </template>
+
+<style scoped>
+@reference "../../style.css";
+.nego { @apply mt-2 inline-flex items-center h-8 px-3.5 rounded-full border text-[12.5px] font-semibold transition; }
+</style>

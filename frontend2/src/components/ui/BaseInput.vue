@@ -17,6 +17,7 @@ defineProps({
   min: [String, Number],
   max: [String, Number],
   list: String,
+  disabled: Boolean,
 })
 const id = useId()
 </script>
@@ -29,6 +30,7 @@ const id = useId()
         'flex items-center gap-2.5 h-12 px-3.5 rounded-xl border bg-white transition-all duration-200',
         'focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10',
         error ? 'border-danger' : 'border-line hover:border-[#dcdce0]',
+        disabled && 'bg-surface',
       ]"
     >
       <component :is="icon" v-if="icon" class="size-[18px] text-muted shrink-0" />
@@ -41,6 +43,7 @@ const id = useId()
         :maxlength="maxlength"
         :autocomplete="autocomplete"
         :required="required"
+        :disabled="disabled"
         :aria-invalid="!!error"
         :aria-describedby="error || hint ? `${id}-d` : undefined"
         class="flex-1 min-w-0 bg-transparent outline-none text-[15px] placeholder:text-muted"

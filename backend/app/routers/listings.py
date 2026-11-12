@@ -93,7 +93,7 @@ def list_houses(request: Request, user: dict = Depends(get_current_user), store:
             continue
         if any(f.get(k) not in (None, '', 'all') and h.get(k) != f[k] for k in ('type', 'district', 'city')):
             continue
-        if pmax and h['price'] > pmax:
+        if pmax and (h.get('price') is None or h['price'] > pmax):   # “Kelishiladi” — narx filtrida chiqmaydi
             continue
         if rooms not in (None, '', 'all') and not (h['rooms'] >= 3 if rooms == '3' else str(h['rooms']) == rooms):
             continue
