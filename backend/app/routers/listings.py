@@ -59,7 +59,7 @@ def list_jobs(request: Request, user: dict = Depends(get_current_user), store: J
             continue
         if not C.matches(j, f.get('q'), ['title', 'company', 'category', 'district', 'city']):
             continue
-        out.append({**j, 'saved': j['id'] in saved, 'applied': j['id'] in applied})
+        out.append({**C.public_listing(j), 'saved': j['id'] in saved, 'applied': j['id'] in applied})
     return C.by_date_desc(out)
 
 
@@ -70,6 +70,10 @@ def _blocked(store: JsonStore) -> frozenset:
 
 def _owner_card(u: dict | None) -> dict | None:
     return {'id': u['id'], 'name': C.full_name(u), 'phone': u.get('phone'), 'telegram': u.get('telegram')} if u else None
+
+
+def _house_owner(store: JsonStore, h: dict) -> dict | None:
+    return C.listing_owner_card(h, store.get('users', h['ownerId']) if h.get('ownerId') else None)
 
 
 @router.get('/houses')
@@ -102,9 +106,13 @@ def list_houses(request: Request, user: dict = Depends(get_current_user), store:
             continue
         if not C.matches(h, f.get('q'), ['title', 'district', 'address', 'city']):
             continue
-        if h['ownerId'] not in owners:
-            owners[h['ownerId']] = _owner_card(store.get('users', h['ownerId']))
-        out.append({**h, 'owner': owners[h['ownerId']], 'saved': h['id'] in saved, 'requested': h['id'] in requested})
+        if C.is_admin_listing(h):
+            owner = _house_owner(store, h)
+        else:
+            if h['ownerId'] not in owners:
+                owners[h['ownerId']] = _owner_card(store.get('users', h['ownerId']))
+            owner = owners[h['ownerId']]
+        out.append({**C.public_listing(h), 'owner': owner, 'saved': h['id'] in saved, 'requested': h['id'] in requested})
     return C.by_date_desc(out)
 
 
@@ -112,9 +120,10 @@ def _get_visible(store: JsonStore, kind: str, item_id: str, user: dict) -> dict:
     k = KIND[kind]
     item = store.get(k['coll'], item_id)
     hidden = item and item[k['owner']] in _blocked(store)
-    if not item or ((item['status'] != 'active' or hidden) and item[k['owner']] != user['id']):
+    mine = bool(item) and item.get(k['owner']) is not None and item[k['owner']] == user['id']
+    if not item or ((item['status'] != 'active' or hidden) and not mine):
         raise HTTPException(404, 'E’lon topilmadi')
-    return item
+    return item if mine else C.public_listing(item)
 
 
 @router.get('/jobs/{item_id}')
@@ -125,7 +134,7 @@ def get_job(item_id: str, user: dict = Depends(get_current_user), store: JsonSto
 @router.get('/houses/{item_id}')
 def get_house(item_id: str, user: dict = Depends(get_current_user), store: JsonStore = Depends(get_store)):
     h = _get_visible(store, 'house', item_id, user)
-    return {**h, 'owner': _owner_card(store.get('users', h['ownerId']))}
+    return {**h, 'owner': _house_owner(store, store.get('houses', item_id) or h)}
 
 
 def _view(kind: str):
@@ -212,7 +221,7 @@ def _mine(kind: str, role_dep):
             item = _own(db, item_id, user)
             old_photos = set(item.get('photos') or [])
             item.update(payload, rejectReason=None, updatedAt=C.now_iso())
-            if item['status'] != 'closed':
+            if item['status'] not in ('closed', 'hidden'):
                 item['status'] = status
                 item['approvedAt'] = approved or item.get('approvedAt')
             others = {p for x in db[k['coll']] if x['id'] != item_id for p in (x.get('photos') or [])}
@@ -235,6 +244,8 @@ def _mine(kind: str, role_dep):
     def set_active(item_id: str, body: ActiveIn, user: dict = Depends(role_dep), store: JsonStore = Depends(get_store)):
         with store.tx(k['coll']) as db:
             item = _own(db, item_id, user)
+            if item['status'] == 'hidden':
+                raise HTTPException(409, 'E’lon administrator tomonidan yashirilgan. Support bilan bog‘laning')
             if body.active:
                 if item['status'] == 'closed':
                     item['status'] = 'active' if item.get('approvedAt') else 'pending'
@@ -291,9 +302,13 @@ def apply(job_id: str, body: ApplyIn, user: dict = Depends(student), store: Json
         app = {'id': C.new_id('a'), 'jobId': job_id, 'studentId': user['id'], 'message': body.message, 'status': 'sent',
                'history': [{'status': 'sent', 'at': at}], 'createdAt': at, 'updatedAt': at}
         db['applications'].insert(0, app)
-        C.add_notification(db['notifications'], job['employerId'], 'user', 'Yangi ariza', f'{C.full_name(user)} → {job["title"]}', '/employer/applications')
-        owner = next((u for u in db['users'] if u['id'] == job['employerId']), None)
-    notify_user(C.tg_chat(owner), f'📩 <b>Yangi ariza</b>\n{esc(C.full_name(user))} → {esc(job["title"])}', '/employer/applications')
+        owner = next((u for u in db['users'] if u['id'] == job['employerId']), None) if job.get('employerId') else None
+        if owner:
+            C.add_notification(db['notifications'], job['employerId'], 'user', 'Yangi ariza', f'{C.full_name(user)} → {job["title"]}', '/employer/applications')
+    if owner:
+        notify_user(C.tg_chat(owner), f'📩 <b>Yangi ariza</b>\n{esc(C.full_name(user))} → {esc(job["title"])}', '/employer/applications')
+    elif C.is_admin_listing(job):  # Support qo‘shgan e’lon — arizani Support ko‘radi
+        notify_admins(f'📩 <b>Admin e’loniga ariza</b>\n{esc(C.full_name(user))} → {esc(job["title"])}', f'/applications?id={app["id"]}')
     return app
 
 
@@ -309,9 +324,13 @@ def rent_request(house_id: str, body: RentRequestIn, user: dict = Depends(studen
         req = {'id': C.new_id('r'), 'houseId': house_id, 'studentId': user['id'], 'message': body.message, 'moveIn': body.moveIn,
                'term': body.term, 'status': 'sent', 'history': [{'status': 'sent', 'at': at}], 'createdAt': at, 'updatedAt': at}
         db['requests'].insert(0, req)
-        C.add_notification(db['notifications'], h['ownerId'], 'inbox', 'Yangi so‘rov', f'{C.full_name(user)} → {h["title"]}', '/landlord/requests')
-        owner = next((u for u in db['users'] if u['id'] == h['ownerId']), None)
-    notify_user(C.tg_chat(owner), f'🏠 <b>Yangi ijara so‘rovi</b>\n{esc(C.full_name(user))} → {esc(h["title"])}', '/landlord/requests')
+        owner = next((u for u in db['users'] if u['id'] == h['ownerId']), None) if h.get('ownerId') else None
+        if owner:
+            C.add_notification(db['notifications'], h['ownerId'], 'inbox', 'Yangi so‘rov', f'{C.full_name(user)} → {h["title"]}', '/landlord/requests')
+    if owner:
+        notify_user(C.tg_chat(owner), f'🏠 <b>Yangi ijara so‘rovi</b>\n{esc(C.full_name(user))} → {esc(h["title"])}', '/landlord/requests')
+    elif C.is_admin_listing(h):
+        notify_admins(f'🏠 <b>Admin e’loniga ijara so‘rovi</b>\n{esc(C.full_name(user))} → {esc(h["title"])}', f'/applications?tab=requests&id={req["id"]}')
     return req
 
 
@@ -320,14 +339,14 @@ def rent_request(house_id: str, body: RentRequestIn, user: dict = Depends(studen
 def my_applications(user: dict = Depends(student), store: JsonStore = Depends(get_store)):
     db = store.read_many('applications', 'jobs')
     jobs = {j['id']: j for j in db['jobs']}
-    return [{**a, 'job': jobs.get(a['jobId'])} for a in C.by_date_desc([a for a in db['applications'] if a['studentId'] == user['id']])]
+    return [{**a, 'job': C.public_listing(jobs[a['jobId']]) if a['jobId'] in jobs else None} for a in C.by_date_desc([a for a in db['applications'] if a['studentId'] == user['id']])]
 
 
 @router.get('/me/rental-requests')
 def my_requests(user: dict = Depends(student), store: JsonStore = Depends(get_store)):
     db = store.read_many('requests', 'houses')
     houses = {h['id']: h for h in db['houses']}
-    return [{**r, 'house': houses.get(r['houseId'])} for r in C.by_date_desc([r for r in db['requests'] if r['studentId'] == user['id']])]
+    return [{**r, 'house': C.public_listing(houses[r['houseId']]) if r['houseId'] in houses else None} for r in C.by_date_desc([r for r in db['requests'] if r['studentId'] == user['id']])]
 
 
 def _withdraw(coll: str):

@@ -86,6 +86,8 @@ function moderation(list, path) {
     setStatus: async (id, status) => put(list, await http(`${path}/${id}`, { method: 'PATCH', body: { status } })),
     update: async (id, body) => put(list, await http(`${path}/${id}`, { method: 'PATCH', body })),
     remove: async (id) => { await http(`${path}/${id}`, { method: 'DELETE' }); drop(list, id) },
+    /** Admin e’loni (ish beruvchi / uy egasi akkauntisiz): manba + tekshiruv; publish=true — darhol nashr */
+    create: async (body) => put(list, await http(path, { method: 'POST', body })),
   }
 }
 
@@ -96,6 +98,9 @@ export const crmApi = {
 
   // ---- E’lonlar ----
   jobs: moderation('jobs', '/crm/jobs'),
+  /** Admin e’loniga kelgan ariza / ijara so‘rovi holati (egasi bor e’lonlarda server 403 qaytaradi) */
+  setApplicationStatus: async (id, status, note) => put('applications', await http(`/crm/applications/${id}`, { method: 'PATCH', body: { status, note } })),
+  setRequestStatus: async (id, status, note) => put('requests', await http(`/crm/rental-requests/${id}`, { method: 'PATCH', body: { status, note } })),
   houses: moderation('houses', '/crm/houses'),
   setJobStatus: (id, status) => crmApi.jobs.setStatus(id, status),
   setHouseStatus: (id, status) => crmApi.houses.setStatus(id, status),

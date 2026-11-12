@@ -959,4 +959,8 @@ export default {
   "Tug‘ilgan sana noto‘g‘ri: yosh 14 dan 70 gacha bo‘lishi kerak": "Неверная дата рождения: возраст от 14 до 70 лет",
   "Bu telefon raqam bilan hisob mavjud. “Kirish” orqali kiring.": "Аккаунт с этим номером уже существует. Войдите через «Вход».",
   "Bu telefon raqam boshqa hisobda ishlatilgan": "Этот номер используется в другом аккаунте",
+  "TalabaGo tekshirgan": "Проверено TalabaGo",
+  "Aloqa ma’lumotlari ko‘rsatilmaydi. Ariza yuboring — javobni ilovada olasiz.": "Контакты не показываются. Отправьте заявку — ответ придёт в приложении.",
+  "Aloqa ma’lumotlari ko‘rsatilmaydi. So‘rov yuboring — javobni ilovada olasiz.": "Контакты не показываются. Отправьте запрос — ответ придёт в приложении.",
+  "E’lon administrator tomonidan yashirilgan. Support bilan bog‘laning": "Объявление скрыто администратором. Свяжитесь с поддержкой",
 }

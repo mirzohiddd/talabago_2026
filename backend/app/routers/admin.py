@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from .. import common as C
 from ..config import Settings, get_settings
 from ..deps import get_admin, get_store, platform_settings
-from ..schemas import Attachment, In, ProfileIn
+from ..schemas import Attachment, HouseIn, In, JobIn, ProfileIn, Str
 from ..storage import JsonStore
 from ..telegram import esc, notify_user
 from ..uploads import delete_media, save_upload
@@ -106,26 +106,89 @@ class RejectIn(In):
 
 class ListingPatch(In):
     model_config = ConfigDict(extra='allow')
-    status: Literal['pending', 'active', 'rejected', 'closed'] | None = None
+    # 'approved' — 'active' ning sinonimi (saqlashda 'active' bo‘lib qoladi: mavjud ma’lumotlar va ilova shu qiymatni ishlatadi)
+    status: Literal['pending', 'active', 'approved', 'rejected', 'hidden', 'closed'] | None = None
+
+
+# ---------------- admin qo‘shadigan e’lonlar: manba va tekshiruv
+class SourceIn(In):
+    type: Literal['telegram_channel', 'telegram_group', 'phone', 'other'] = 'telegram_channel'
+    name: Str(120) = Field(min_length=2)          # kanal / guruh nomi yoki @username
+    url: Str(300) = ''                            # e’lon havolasi (https://t.me/...)
+    postedAt: Str(40) = ''                        # manbada joylangan sana (ixtiyoriy)
+
+    @field_validator('url')
+    @classmethod
+    def _url(cls, v):
+        if v and not v.startswith(('https://', 'http://')):
+            raise ValueError('Havola https:// bilan boshlansin')
+        return v
+
+
+class VerificationIn(In):
+    ownerContacted: bool = False   # admin e’lon egasi bilan bog‘lanib, ma’lumotlarni tasdiqlatdi
+    ownerConsent: bool = False     # egasi TalabaGo’da joylashga rozi
+    phoneConsent: bool = False     # egasi telefon/Telegram talabalarga ko‘rsatilishiga rozi
+    method: Literal['phone', 'telegram', 'in_person', 'other'] = 'phone'
+    note: Str(500) = ''
+
+
+class AdminListingMeta(In):
+    source: SourceIn
+    verification: VerificationIn = Field(default_factory=VerificationIn)
+    contactName: Str(80) = ''
+    publish: bool = False          # true — darhol tasdiqlab nashr qilish (rozilik belgilangan bo‘lishi shart)
+
+
+class AdminJobIn(JobIn, AdminListingMeta):
+    address: Str(200) = ''
+
+
+class AdminHouseIn(HouseIn, AdminListingMeta):
+    photos: list[Str(300)] = Field(min_length=1, max_length=10)   # Telegram e’lonlarida rasm kamroq bo‘lishi mumkin
+
+
+def _publishable(verification: dict | None) -> bool:
+    v = verification or {}
+    return bool(v.get('ownerContacted') and v.get('ownerConsent'))
+
+
+def _verification(v: VerificationIn | dict, admin: dict, prev: dict | None = None) -> dict:
+    d = v.model_dump() if hasattr(v, 'model_dump') else dict(v)
+    out = {**(prev or {}), **d}
+    if d.get('ownerContacted') and not (prev or {}).get('ownerContacted'):
+        out['verifiedAt'] = C.now_iso()
+        out['verifiedBy'] = admin.get('username')
+    return out
 
 
 EDITABLE = {
-    'jobs': {'title', 'company', 'salary', 'salaryPeriod', 'district', 'city', 'schedule', 'category', 'description', 'type', 'format', 'workTime', 'phone', 'telegram'},
-    'houses': {'title', 'price', 'district', 'city', 'address', 'rooms', 'freeSpots', 'capacity', 'description', 'type', 'audience', 'occupancy', 'phone', 'telegram'},
+    'jobs': {'title', 'company', 'salary', 'salaryPeriod', 'district', 'city', 'schedule', 'category', 'description', 'type', 'format', 'workTime', 'phone', 'telegram',
+             'address', 'requirements', 'contactName'},
+    'houses': {'title', 'price', 'district', 'city', 'address', 'rooms', 'freeSpots', 'capacity', 'description', 'type', 'audience', 'occupancy', 'phone', 'telegram',
+               'amenities', 'photos', 'area', 'contactName'},
 }
+LIST_FIELDS = {'requirements': (20, 200), 'amenities': (20, 40), 'photos': (10, 300)}
 NUMERIC = {'salary', 'price', 'rooms', 'freeSpots', 'capacity'}
 
 
 def _moderation(coll: str, owner_key: str, label: str, link: str):
     def _notify(db, item, icon, title, text):
+        if not item.get(owner_key):          # admin qo‘shgan e’lon — xabar yuboriladigan akkaunt yo‘q
+            return
         C.add_notification(db['notifications'], item[owner_key], icon, title, text, link)
         owner = next((u for u in db['users'] if u['id'] == item[owner_key]), None)
         notify_user(C.tg_chat(owner), f'<b>{title}</b>\n{esc(text)}', link)
 
-    def approve(item_id: str, store: JsonStore = Depends(get_store)):
+    def _guard_publish(item):
+        if C.is_admin_listing(item) and not _publishable(item.get('verification')):
+            raise HTTPException(422, 'Nashr qilishdan oldin e’lon egasi bilan bog‘lanib, roziligini belgilang')
+
+    def approve(item_id: str, store: JsonStore = Depends(get_store), admin: dict = Depends(get_admin)):
         with store.tx(coll, 'notifications', 'users') as db:
             item = _find(db[coll], item_id)
-            item.update(status='active', rejectReason=None, approvedAt=C.now_iso(), updatedAt=C.now_iso())
+            _guard_publish(item)
+            item.update(status='active', rejectReason=None, approvedAt=C.now_iso(), updatedAt=C.now_iso(), approvedBy=admin.get('username'))
             _notify(db, item, 'check', f'{label} tasdiqlandi', item['title'])
         return item
 
@@ -136,12 +199,37 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
             _notify(db, item, 'x', f'{label} rad etildi', f'{item["title"]}: {body.reason}')
         return item
 
-    def patch(item_id: str, body: ListingPatch, store: JsonStore = Depends(get_store)):
+    def patch(item_id: str, body: ListingPatch, store: JsonStore = Depends(get_store), admin: dict = Depends(get_admin)):
         data = body.model_dump(exclude_unset=True)
+        if data.get('status') == 'approved':
+            data['status'] = 'active'
         clean = {}
+        meta = {}
+        for k in ('source', 'verification'):
+            if k in data:
+                try:
+                    meta[k] = (SourceIn if k == 'source' else VerificationIn)(**(data.pop(k) or {}))
+                except ValidationError as e:
+                    raise HTTPException(422, f'{k}: {e.errors()[0]["msg"]}') from e
         for k, v in data.items():
             if k == 'status' or k in EDITABLE[coll]:
-                if k in NUMERIC:
+                if k in LIST_FIELDS:
+                    mx, ln = LIST_FIELDS[k]
+                    if not isinstance(v, list) or len(v) > mx:
+                        raise HTTPException(422, f'{k}: ro‘yxat noto‘g‘ri')
+                    v = [str(x).strip()[:ln] for x in v if str(x).strip()]
+                    if k == 'photos' and (not v or not all(C.is_media_url(p) for p in v)):
+                        raise HTTPException(422, 'Rasmlar /media/ orqali yuklanishi kerak')
+                elif k in ('phone',) and v:
+                    v = C.normalize_phone(v)
+                    if not v:
+                        raise HTTPException(422, 'Telefon raqam noto‘g‘ri: +998 XX XXX XX XX')
+                elif k == 'area':
+                    try:
+                        v = float(v) if v not in (None, '') else None
+                    except (TypeError, ValueError) as e:
+                        raise HTTPException(422, 'area: son kiriting') from e
+                elif k in NUMERIC:
                     try:
                         v = int(v)
                     except (TypeError, ValueError) as e:
@@ -153,9 +241,35 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
                 clean[k] = v
         with store.tx(coll) as db:
             item = _find(db[coll], item_id)
+            if 'source' in meta and C.is_admin_listing(item):
+                item['source'] = meta['source'].model_dump()
+            if 'verification' in meta and C.is_admin_listing(item):
+                item['verification'] = _verification(meta['verification'], admin, item.get('verification'))
+            if clean.get('status') == 'active':
+                _guard_publish(item)
             item.update(clean, updatedAt=C.now_iso())
             if clean.get('status') == 'active' and not item.get('approvedAt'):
                 item['approvedAt'] = C.now_iso()
+        return item
+
+    def create(body: AdminJobIn, store: JsonStore = Depends(get_store), admin: dict = Depends(get_admin)):
+        """Admin e’loni (ish beruvchi / uy egasi akkauntisiz) — Telegram kanal/guruhdan olingan, egasi bilan tekshirilgan."""
+        payload = body.model_dump(exclude={'source', 'verification', 'contactName', 'publish'})
+        if coll == 'jobs' and payload['format'] == 'online':
+            payload['district'] = None
+        if body.publish and not _publishable(body.verification.model_dump()):
+            raise HTTPException(422, 'Darhol nashr qilish uchun egasi bilan bog‘langaningiz va uning roziligini belgilang')
+        now = C.now_iso()
+        item = {'id': C.new_id('j' if coll == 'jobs' else 'h'), owner_key: None, 'views': 0, **payload,
+                'status': 'active' if body.publish else 'pending', 'rejectReason': None, 'approvedAt': now if body.publish else None,
+                'approvedBy': admin.get('username') if body.publish else None,
+                'createdBy': 'admin', 'adminId': admin['id'], 'contactName': body.contactName,
+                'source': body.source.model_dump(), 'verification': _verification(body.verification, admin),
+                'createdAt': now, 'updatedAt': now}
+        if coll == 'houses':
+            item.setdefault('occupancy', 'free')
+        with store.tx(coll) as db:
+            db[coll].insert(0, item)
         return item
 
     def remove(item_id: str, store: JsonStore = Depends(get_store)):
@@ -169,7 +283,10 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
         for p in set(item.get('photos') or []) - others:
             delete_media(store.media_dir, p)
 
+    # `from __future__ import annotations` — model obyektini to‘g‘ridan-to‘g‘ri beramiz (satr emas)
+    create.__annotations__['body'] = AdminJobIn if coll == 'jobs' else AdminHouseIn
     base = f'/crm/{coll}'
+    router.add_api_route(base, create, methods=['POST'], status_code=201)
     router.add_api_route(base + '/{item_id}/approve', approve, methods=['POST'])
     router.add_api_route(base + '/{item_id}/reject', reject, methods=['POST'])
     router.add_api_route(base + '/{item_id}', patch, methods=['PATCH'])
@@ -178,6 +295,40 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
 
 _moderation('jobs', 'employerId', 'Vakansiya', '/employer/new')
 _moderation('houses', 'ownerId', 'Uy e’loni', '/landlord/new')
+
+
+# ============================================================ admin e’lonlariga kelgan arizalar
+class CrmAppStatusIn(In):
+    status: Literal['viewed', 'interview', 'accepted', 'declined']
+    note: Str(500) | None = None
+
+
+def _crm_status(coll: str, parent: str, key: str, texts: dict, link: str):
+    def handler(item_id: str, body: CrmAppStatusIn, store: JsonStore = Depends(get_store)):
+        if coll == 'requests' and body.status == 'interview':
+            raise HTTPException(422, 'Ijara so‘rovida bu holat yo‘q')
+        with store.tx(coll, parent, 'notifications', 'users') as db:
+            x = _find(db[coll], item_id)
+            listing = next((i for i in db[parent] if i['id'] == x[key]), None)
+            if not C.is_admin_listing(listing):
+                raise HTTPException(403, 'Bu ariza e’lon egasiga tegishli — holatini faqat u o‘zgartiradi')
+            if x['status'] == 'withdrawn':
+                raise HTTPException(409, 'Talaba bekor qilgan')
+            C.push_status(x, body.status, body.note)
+            C.add_notification(db['notifications'], x['studentId'], 'x' if body.status == 'declined' else 'check', texts[body.status], listing['title'], link)
+            st = next((u for u in db['users'] if u['id'] == x['studentId']), None)
+        if body.status != 'viewed':
+            notify_user(C.tg_chat(st), f'<b>{texts[body.status]}</b>\n{esc(listing["title"])}', link)
+        return x
+    return handler
+
+
+router.add_api_route('/crm/applications/{item_id}', _crm_status('applications', 'jobs', 'jobId', {
+    'viewed': 'Arizangiz ko‘rib chiqildi', 'interview': 'Sizni suhbatga chaqirishdi', 'accepted': 'Arizangiz qabul qilindi', 'declined': 'Arizangiz rad etildi'},
+    '/student/applications'), methods=['PATCH'])
+router.add_api_route('/crm/rental-requests/{item_id}', _crm_status('requests', 'houses', 'houseId', {
+    'viewed': 'So‘rovingiz ko‘rildi', 'accepted': 'Ijara so‘rovingiz qabul qilindi', 'declined': 'Ijara so‘rovingiz rad etildi'},
+    '/student/applications?tab=requests'), methods=['PATCH'])
 
 
 # ============================================================ kurslar

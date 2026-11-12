@@ -34,12 +34,12 @@ const audience = (v) => AUDIENCES.find((a) => a.value === v)?.label
   <ListingAdmin illu="building"
     :title="$t('Turar joylar')" :items="crmStore.houses" :loading="loading" :columns="columns" testid="houses-table"
     filter-key="type" :filter-options="typeOpts" :search-fields="['title', 'district', 'address', 'city']"
-    :api="crmApi.houses" :edit-fields="editFields" :reject-reasons="REASONS"
+    :api="crmApi.houses" :edit-fields="editFields" :reject-reasons="REASONS" kind="house" :add-label="$t('Turar joy qo‘shish')"
   >
     <template #title="{ item }">
       <div class="flex items-center gap-3"><MediaImg :src="item.photos?.[0]" class="size-11 rounded-lg object-cover bg-brand-50 shrink-0" /><p class="font-semibold max-w-[200px] truncate">{{ item.title }}</p></div>
     </template>
-    <template #owner="{ item }"><span class="whitespace-nowrap">{{ fullName(owner(item.ownerId)) }}</span></template>
+    <template #owner="{ item }"><span class="whitespace-nowrap">{{ item.ownerId ? fullName(owner(item.ownerId)) : (item.contactName || $t('Akkauntsiz (admin e’loni)')) }}</span></template>
     <template #type="{ item }"><span class="pill">{{ $t(HOUSE_TYPE_LABELS[item.type]) }}</span></template>
     <template #price="{ item }"><span class="font-semibold tabular-nums whitespace-nowrap">{{ priceText(item) }}</span></template>
     <template #district="{ item }">{{ $t(item.district) }}, {{ $t(item.city) }}</template>
@@ -60,8 +60,9 @@ const audience = (v) => AUDIENCES.find((a) => a.value === v)?.label
       <p class="text-[14.5px] text-ink-2 leading-relaxed whitespace-pre-line">{{ item.description }}</p>
       <div class="rounded-xl border border-line p-3.5 text-sm space-y-1.5">
         <p class="font-bold flex items-center gap-1.5"><UserRound class="size-4" />{{ $t('Uy egasi') }}</p>
-        <RouterLink :to="{ path: '/users', query: { id: item.ownerId } }" class="block font-semibold text-brand-700 hover:underline">{{ fullName(owner(item.ownerId)) }}</RouterLink>
-        <p class="flex items-center gap-1.5 text-ink-2"><Phone class="size-4" />{{ item.phone }} <Send class="size-4 ml-2" />{{ item.telegram || '—' }}</p>
+        <RouterLink v-if="item.ownerId" :to="{ path: '/users', query: { id: item.ownerId } }" class="block font-semibold text-brand-700 hover:underline">{{ fullName(owner(item.ownerId)) }}</RouterLink>
+        <p v-else class="font-semibold">{{ item.contactName || $t('Akkauntsiz (admin e’loni)') }}</p>
+        <p class="flex items-center gap-1.5 text-ink-2"><Phone class="size-4" />{{ item.phone || '—' }} <Send class="size-4 ml-2" />{{ item.telegram || '—' }}</p>
       </div>
     </template>
   </ListingAdmin>

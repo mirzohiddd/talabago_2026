@@ -14,7 +14,9 @@ import StatusBadge from '@/components/ui/StatusBadge.vue'
 import StatusTimeline from '@/components/ui/StatusTimeline.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { crmStore, ensureCrmLoaded, fullName } from '@/services/crm'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import { crmStore, ensureCrmLoaded, crmApi, fullName } from '@/services/crm'
+import { toast } from '@/stores/toast'
 import { STATUS, RENT_TERMS } from '@/config/status'
 import { t } from '@/i18n'
 
@@ -40,8 +42,8 @@ const user = (id) => crmStore.users.find((u) => u.id === id)
 const job = (id) => crmStore.jobs.find((j) => j.id === id)
 const house = (id) => crmStore.houses.find((h) => h.id === id)
 const rowsAll = computed(() => (tab.value === 'applications'
-  ? crmStore.applications.map((a) => { const j = job(a.jobId); return { ...a, target: j?.title || a.jobId, owner: j?.company, ownerId: j?.employerId } })
-  : crmStore.requests.map((r) => { const h = house(r.houseId); return { ...r, target: h?.title || r.houseId, owner: fullName(user(h?.ownerId)), ownerId: h?.ownerId } })))
+  ? crmStore.applications.map((a) => { const j = job(a.jobId); return { ...a, target: j?.title || a.jobId, owner: j?.employerId ? j?.company : `${j?.company || ''} · ${t('Support')}`, ownerId: j?.employerId, adminListing: j?.createdBy === 'admin' } })
+  : crmStore.requests.map((r) => { const h = house(r.houseId); return { ...r, target: h?.title || r.houseId, owner: h?.ownerId ? fullName(user(h?.ownerId)) : `${h?.contactName || ''} · ${t('Support')}`, ownerId: h?.ownerId, adminListing: h?.createdBy === 'admin' } })))
 const keys = computed(() => (tab.value === 'applications' ? ['sent', 'viewed', 'interview', 'accepted', 'declined', 'withdrawn'] : ['sent', 'viewed', 'accepted', 'declined', 'withdrawn']))
 const chips = computed(() => [{ value: 'all', label: `${t('Barchasi')} · ${rowsAll.value.length}` }, ...keys.value.map((k) => ({ value: k, label: `${t(STATUS[k].label)} · ${rowsAll.value.filter((x) => x.status === k).length}` }))])
 const filtered = computed(() => {
@@ -56,6 +58,23 @@ const rows = computed(() => filtered.value.slice((page.value - 1) * PER, page.va
 const current = ref(null)
 const drawer = ref(false)
 const termLabel = (v) => RENT_TERMS.find((x) => x.value === v)?.label
+watch(() => [loading.value, route.query.id], () => {
+  const x = !loading.value && route.query.id && rowsAll.value.find((r) => r.id === route.query.id)
+  if (x) { current.value = x; drawer.value = true }
+}, { immediate: true })
+
+// Admin (akkauntsiz) e’lonlariga kelgan ariza/so‘rovlar holatini Support o‘zi boshqaradi
+const actions = computed(() => (tab.value === 'applications' ? ['viewed', 'interview', 'accepted', 'declined'] : ['viewed', 'accepted', 'declined']))
+const busy = ref('')
+async function setStatus(s) {
+  busy.value = s
+  try {
+    const fn = tab.value === 'applications' ? crmApi.setApplicationStatus : crmApi.setRequestStatus
+    const x = await fn(current.value.id, s)
+    current.value = { ...current.value, ...x }
+    toast(t('Holat yangilandi — talabaga xabar yuborildi'))
+  } catch (e) { toast(t(e.message), 'error') } finally { busy.value = '' }
+}
 </script>
 
 <template>
@@ -91,12 +110,20 @@ const termLabel = (v) => RENT_TERMS.find((x) => x.value === v)?.label
         <StatusBadge :status="current.status" />
         <dl class="grid grid-cols-2 gap-2.5">
           <div class="info"><dt>{{ $t('Talaba') }}</dt><dd><RouterLink :to="{ path: '/users', query: { id: current.studentId } }" class="text-brand-700 hover:underline">{{ fullName(user(current.studentId)) }}</RouterLink></dd></div>
-          <div class="info"><dt>{{ tab === 'applications' ? $t('Ish beruvchi') : $t('Uy egasi') }}</dt><dd><RouterLink :to="{ path: '/users', query: { id: current.ownerId } }" class="text-brand-700 hover:underline">{{ current.owner }}</RouterLink></dd></div>
+          <div class="info"><dt>{{ tab === 'applications' ? $t('Ish beruvchi') : $t('Uy egasi') }}</dt><dd><RouterLink v-if="current.ownerId" :to="{ path: '/users', query: { id: current.ownerId } }" class="text-brand-700 hover:underline">{{ current.owner }}</RouterLink><span v-else>{{ current.owner }}</span></dd></div>
+          <div class="info"><dt>{{ $t('Talaba telefoni') }}</dt><dd>{{ user(current.studentId)?.phone || '—' }} {{ user(current.studentId)?.telegram || '' }}</dd></div>
           <div class="info"><dt>{{ $t('Yuborilgan') }}</dt><dd>{{ $dateTime(current.createdAt) }}</dd></div>
           <div v-if="current.interviewAt" class="info"><dt>{{ $t('Suhbat') }}</dt><dd>{{ $dateTime(current.interviewAt) }}</dd></div>
           <div v-if="current.moveIn" class="info"><dt>{{ $t('Ko‘chib o‘tish') }}</dt><dd>{{ $date(current.moveIn) }} · {{ $t(termLabel(current.term) || '') }}</dd></div>
         </dl>
         <p v-if="current.message" class="rounded-xl bg-surface px-3.5 py-3 text-ink-2">“{{ current.message }}”</p>
+        <section v-if="current.adminListing && current.status !== 'withdrawn'" class="rounded-xl border border-line p-3.5" data-testid="crm-app-actions">
+          <h4 class="font-bold mb-1">{{ $t('Admin e’loni — javobni Support beradi') }}</h4>
+          <p class="text-xs text-muted mb-3">{{ $t('E’lon egasining akkaunti yo‘q. Egasi bilan gaplashib, natijani belgilang — talabaga bildirishnoma boradi.') }}</p>
+          <div class="flex flex-wrap gap-2">
+            <BaseButton v-for="s in actions" :key="s" size="sm" :variant="s === 'declined' ? 'danger' : s === 'accepted' ? 'primary' : 'soft'" :loading="busy === s" :disabled="current.status === s" @click="setStatus(s)">{{ $t(STATUS[s].label) }}</BaseButton>
+          </div>
+        </section>
         <section><h4 class="font-bold mb-2">{{ $t('Tarix') }}</h4><StatusTimeline :history="current.history" /></section>
       </div>
     </SideDrawer>

@@ -23,6 +23,8 @@ import { ROLE_LABELS, SHIFTS, CITIES, CITY_LIST } from '@/config/status'
 import { fileSize } from '@/utils/format'
 import { toast } from '@/stores/toast'
 import { t } from '@/i18n'
+import { phoneProblem, formatPhone, PHONE_MESSAGES } from '@shared/phone'
+import PhoneInput from '@/components/ui/PhoneInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -102,12 +104,22 @@ const shiftOpts = computed(() => SHIFTS.map((s) => ({ value: s.value, label: t(s
 async function saveEdit() {
   errors.value = {}
   if (!form.value.firstName?.trim()) errors.value.firstName = t('Majburiy maydon')
-  if (!/^\+?998[\s\d]{9,}$/.test((form.value.phone || '').replace(/\s/g, '').replace(/^\+/, '+'))) errors.value.phone = t('Telefon raqam noto‘g‘ri: +998 XX XXX XX XX')
+  const problem = phoneProblem(form.value.phone)
+  if (problem) errors.value.phone = t(PHONE_MESSAGES[problem])
   if (Object.keys(errors.value).length) return
-  const { id, ...body } = form.value
-  await crmApi.updateUser(id, body)
-  editOpen.value = false
-  toast(t('Profil saqlandi'))
+  // faqat o‘zgargan maydonlar (eski ma’lumotdagi boshqa qiymatlar saqlashga to‘sqinlik qilmasin)
+  const orig = crmStore.users.find((x) => x.id === form.value.id) || {}
+  const body = Object.fromEntries(Object.entries(form.value).filter(([k, v]) => k !== 'id' && JSON.stringify(v ?? '') !== JSON.stringify(orig[k] ?? '')))
+  if ('phone' in body) body.phone = formatPhone(body.phone)
+  try {
+    if (Object.keys(body).length) await crmApi.updateUser(form.value.id, body)
+    editOpen.value = false
+    toast(t('Profil saqlandi'))
+  } catch (e) {
+    for (const x of e.data?.errors || []) errors.value[String(x.field).split('.')[0]] = x.message
+    if (e.status === 409) errors.value.phone = e.message
+    toast(e.message, 'error')
+  }
 }
 
 ensureCrmLoaded().then(() => {
@@ -225,7 +237,7 @@ ensureCrmLoaded().then(() => {
       <div class="grid sm:grid-cols-2 gap-4">
         <BaseInput v-model="form.firstName" :label="$t('Ism')" required :error="errors.firstName" />
         <BaseInput v-model="form.lastName" :label="$t('Familiya')" />
-        <BaseInput v-model="form.phone" :label="$t('Telefon')" required :error="errors.phone" />
+        <PhoneInput v-model="form.phone" :label="$t('Telefon')" required :error="errors.phone" data-testid="u-phone" />
         <BaseInput v-model="form.telegram" label="Telegram" />
         <BaseSelect v-model="form.city" :label="$t('Shahar')" :options="cityOpts" />
         <BaseSelect v-model="form.district" :label="$t('Tuman')" :options="districtOpts" :placeholder="$t('Tanlang')" />

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { MapPin, CalendarClock, Eye, CheckCircle2, Send, Wifi, Building2, Heart, Flag, Clock, ArrowRight } from 'lucide-vue-next'
+import { MapPin, CalendarClock, Eye, CheckCircle2, Send, Wifi, Building2, Heart, Flag, Clock, ArrowRight, ShieldCheck } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -53,7 +53,9 @@ async function save() {
           <span class="chip bg-brand text-white">{{ $t(typeLabel) }}</span>
           <span class="chip bg-white"><component :is="job.format === 'online' ? Wifi : Building2" class="size-3.5" />{{ job.format === 'online' ? 'Online' : 'Offline' }}</span>
           <span v-if="timeLabel" class="chip bg-white"><Clock class="size-3.5" />{{ $t(timeLabel) }}</span>
+          <span v-if="job.verified" class="chip bg-white text-brand-700" data-testid="verified-badge"><ShieldCheck class="size-3.5" />{{ $t('TalabaGo tekshirgan') }}</span>
         </div>
+        <p v-if="job.address" class="flex items-start gap-1.5 text-[13.5px] text-ink-2 mt-2"><MapPin class="size-4 shrink-0 mt-0.5" />{{ job.address }}</p>
       </div>
       <dl class="grid grid-cols-2 gap-3 text-sm">
         <div class="info"><dt><MapPin class="size-4" />{{ $t('Manzil') }}</dt><dd>{{ job.format === 'online' ? $t('Masofaviy (online)') : `${$t(job.district || '')}, ${$t(job.city)}` }}</dd></div>
@@ -74,6 +76,7 @@ async function save() {
       <section>
         <h4 class="font-bold mb-2">{{ $t('Bog‘lanish') }}</h4>
         <ContactButtons :phone="job.phone" :telegram="job.telegram" />
+        <p v-if="!job.phone && !job.telegram" class="text-[13.5px] text-muted">{{ $t('Aloqa ma’lumotlari ko‘rsatilmaydi. Ariza yuboring — javobni ilovada olasiz.') }}</p>
       </section>
       <button v-if="mode === 'student'" class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-danger" data-testid="complain" @click="complain = true"><Flag class="size-4" />{{ $t('Shikoyat qilish') }}</button>
     </div>

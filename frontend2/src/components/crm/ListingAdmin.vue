@@ -5,7 +5,8 @@
  */
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Eye, EyeOff, CheckCircle2, XCircle, Trash2, Pencil, RotateCcw } from 'lucide-vue-next'
+import { Eye, EyeOff, CheckCircle2, XCircle, Trash2, Pencil, RotateCcw, Plus, Link2, ShieldCheck, ShieldAlert, Hourglass } from 'lucide-vue-next'
+import AdminListingForm from './AdminListingForm.vue'
 import PageHeader from './PageHeader.vue'
 import SearchBox from './SearchBox.vue'
 import Pagination from './Pagination.vue'
@@ -37,6 +38,8 @@ const props = defineProps({
   rejectReasons: Array,
   testid: String,
   illu: String,
+  kind: String, // 'job' | 'house' — admin e’lon qo‘shish formasi uchun
+  addLabel: String,
 })
 const route = useRoute()
 const router = useRouter()
@@ -70,9 +73,19 @@ watch(() => [props.loading, route.query.id], () => {
 }, { immediate: true })
 watch(drawer, (v) => { if (!v && route.query.id) { const { id, ...rest } = route.query; router.replace({ query: rest }) } })
 
-async function approve(i) { await props.api.approve(i.id); toast(t('Tasdiqlandi — foydalanuvchilarga ko‘rinadi')) }
-async function hide(i) { await props.api.setStatus(i.id, 'hidden'); toast(t('Yashirildi')) }
-async function unhide(i) { await props.api.setStatus(i.id, 'active'); toast(t('Qayta ko‘rsatildi')) }
+const pendingCount = computed(() => props.items.filter((i) => i.status === 'pending').length)
+const safe = async (fn, ok) => { try { await fn(); toast(ok) } catch (e) { toast(t(e.message), 'error') } }
+async function approve(i) { await safe(() => props.api.approve(i.id), t('Tasdiqlandi — foydalanuvchilarga ko‘rinadi')) }
+async function hide(i) { await safe(() => props.api.setStatus(i.id, 'hidden'), t('Yashirildi')) }
+async function unhide(i) { await safe(() => props.api.setStatus(i.id, 'active'), t('Qayta ko‘rsatildi')) }
+
+// Admin e’loni (akkauntsiz): qo‘shish va to‘liq tahrirlash
+const isAdminItem = (i) => i?.createdBy === 'admin'
+const alOpen = ref(false)
+const alItem = ref(null)
+function addListing() { alItem.value = null; alOpen.value = true }
+function onSaved(item) { if (drawer.value) current.value = item }
+const SRC_LABEL = { telegram_channel: 'Telegram kanal', telegram_group: 'Telegram guruh', phone: 'Telefon orqali', other: 'Boshqa' }
 
 // Rad etish
 const rjOpen = ref(false)
@@ -89,7 +102,10 @@ async function reject() {
 // Tahrirlash
 const edOpen = ref(false)
 const form = ref({})
-function askEdit(i) { current.value = i; form.value = Object.fromEntries(props.editFields.map((f) => [f.key, i[f.key]])); edOpen.value = true }
+function askEdit(i) {
+  if (isAdminItem(i)) { alItem.value = i; alOpen.value = true; return }
+  current.value = i; form.value = Object.fromEntries(props.editFields.map((f) => [f.key, i[f.key]])); edOpen.value = true
+}
 async function saveEdit() {
   const body = Object.fromEntries(props.editFields.map((f) => [f.key, f.type === 'number' ? +form.value[f.key] : form.value[f.key]]))
   await props.api.update(current.value.id, body)
@@ -111,7 +127,15 @@ async function remove() {
 
 <template>
   <div>
-    <PageHeader :title="title" :illu="illu"><SearchBox v-model="q" /></PageHeader>
+    <PageHeader :title="title" :illu="illu">
+      <div class="flex flex-wrap items-center gap-2">
+        <span v-if="pendingCount" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-amber-50 text-amber-700 text-[13px] font-bold" data-testid="pending-count">
+          <Hourglass class="size-4" />{{ $t('Tasdiqlashni kutmoqda') }}: {{ pendingCount }}
+        </span>
+        <SearchBox v-model="q" />
+        <BaseButton v-if="kind" :icon="Plus" data-testid="add-listing" @click="addListing">{{ addLabel }}</BaseButton>
+      </div>
+    </PageHeader>
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <div class="min-w-0 flex-1"><ChipGroup v-model="status" :options="statusChips" size="sm" data-testid="mod-status" /></div>
       <BaseSelect v-model="filter" class="w-56" :options="[{ value: 'all', label: $t('Barcha turlar') }, ...filterOptions]" />
@@ -126,7 +150,10 @@ async function remove() {
             <thead><tr><th v-for="c in columns" :key="c.key" :class="c.class">{{ c.label }}</th><th>{{ $t('Holat') }}</th><th class="text-right">{{ $t('Amallar') }}</th></tr></thead>
             <tbody>
               <tr v-for="i in rows" :key="i.id" :class="['closed', 'hidden'].includes(i.status) && 'opacity-70'" :data-id="i.id">
-                <td v-for="c in columns" :key="c.key" :class="c.class"><slot :name="c.key" :item="i">{{ i[c.key] }}</slot></td>
+                <td v-for="(c, ci) in columns" :key="c.key" :class="c.class">
+                  <slot :name="c.key" :item="i">{{ i[c.key] }}</slot>
+                  <span v-if="ci === 0 && isAdminItem(i)" class="inline-flex items-center gap-1 mt-1 px-2 h-5 rounded-full bg-brand-50 text-brand-700 text-[11px] font-bold" data-testid="admin-tag"><Link2 class="size-3" />{{ $t('Admin · {s}', { s: i.source?.name || '' }) }}</span>
+                </td>
                 <td><StatusBadge :status="i.status" /></td>
                 <td>
                   <div class="flex justify-end gap-1">
@@ -154,6 +181,22 @@ async function remove() {
         <StatusBadge :status="current.status" />
         <p v-if="current.status === 'rejected'" class="text-[13px] rounded-xl bg-danger/8 text-danger px-3 py-2.5"><b>{{ $t('Rad etish sababi') }}:</b> {{ current.rejectReason }}</p>
         <slot name="detail" :item="current" />
+        <div v-if="isAdminItem(current)" class="rounded-xl border border-line p-3.5 text-sm space-y-2" data-testid="admin-meta">
+          <p class="font-bold flex items-center gap-1.5"><Link2 class="size-4" />{{ $t('Manba') }}</p>
+          <p>{{ $t(SRC_LABEL[current.source?.type] || '') }} · <b>{{ current.source?.name }}</b>
+            <a v-if="current.source?.url" :href="current.source.url" target="_blank" rel="noopener noreferrer" class="text-brand-700 hover:underline ml-1">{{ $t('havola') }}</a>
+            <span v-if="current.source?.postedAt" class="text-muted"> · {{ current.source.postedAt }}</span></p>
+          <p class="font-bold flex items-center gap-1.5 pt-1">
+            <component :is="current.verification?.ownerContacted && current.verification?.ownerConsent ? ShieldCheck : ShieldAlert" class="size-4" />{{ $t('Tekshiruv') }}
+          </p>
+          <ul class="text-ink-2 space-y-0.5">
+            <li>{{ current.verification?.ownerContacted ? '✓' : '✗' }} {{ $t('Egasi bilan bog‘lanildi') }}<span v-if="current.verification?.verifiedBy" class="text-muted"> · {{ current.verification.verifiedBy }}, {{ $dateTime(current.verification.verifiedAt) }}</span></li>
+            <li>{{ current.verification?.ownerConsent ? '✓' : '✗' }} {{ $t('Joylashga rozilik') }}</li>
+            <li>{{ current.verification?.phoneConsent ? '✓' : '✗' }} {{ $t('Telefonni ko‘rsatishga rozilik') }}</li>
+          </ul>
+          <p v-if="current.verification?.note" class="text-muted">{{ current.verification.note }}</p>
+          <p v-if="current.contactName" class="text-ink-2">{{ $t('Aloqa') }}: <b>{{ current.contactName }}</b></p>
+        </div>
       </div>
       <template #footer>
         <div v-if="current" class="flex flex-wrap gap-2">
@@ -188,6 +231,8 @@ async function remove() {
       </div>
       <template #footer><BaseButton block @click="saveEdit">{{ $t('Saqlash') }}</BaseButton></template>
     </BaseModal>
+
+    <AdminListingForm v-if="kind" v-model="alOpen" :kind="kind" :item="alItem" :api="api" @saved="onSaved" />
 
     <ConfirmModal v-model="del" :title="$t('O‘chirish')" :text="$t('“{x}” butunlay o‘chiriladi. Bu amalni ortga qaytarib bo‘lmaydi.', { x: current?.title })" :confirm-text="$t('O‘chirish')" danger :loading="busy" @confirm="remove" />
   </div>

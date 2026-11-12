@@ -137,3 +137,33 @@ def monthly_estimate(j: dict) -> float:
 
 def is_media_url(v) -> bool:
     return isinstance(v, str) and v.startswith('/media/') and '..' not in v
+
+
+# ============================================================ admin (Support) qo‘shgan e’lonlar
+# Bunday e’lonlarda egasi akkaunti yo‘q (employerId / ownerId = None), createdBy = 'admin'.
+# source / verification — ichki ma’lumot: foydalanuvchi ilovasiga hech qachon chiqmaydi.
+INTERNAL_LISTING_KEYS = ('source', 'verification', 'adminId')
+
+
+def is_admin_listing(item: dict | None) -> bool:
+    return bool(item) and item.get('createdBy') == 'admin'
+
+
+def public_listing(item: dict) -> dict:
+    """Foydalanuvchilarga ko‘rsatiladigan e’lon nusxasi.
+    Admin e’lonida telefon/Telegram faqat egasi ko‘rsatishga rozi bo‘lsa (verification.phoneConsent) qaytadi."""
+    out = {k: v for k, v in item.items() if k not in INTERNAL_LISTING_KEYS}
+    if is_admin_listing(item):
+        out['verified'] = bool((item.get('verification') or {}).get('ownerContacted'))
+        if not (item.get('verification') or {}).get('phoneConsent'):
+            out['phone'] = None
+            out['telegram'] = None
+    return out
+
+
+def listing_owner_card(item: dict, user: dict | None) -> dict | None:
+    """Uy egasi kartasi: akkaunt bo‘lsa — akkaunt, admin e’lonida — e’londagi aloqa (rozilik bo‘lsa)."""
+    if is_admin_listing(item):
+        pub = public_listing(item)
+        return {'id': None, 'name': item.get('contactName') or 'TalabaGo', 'phone': pub.get('phone'), 'telegram': pub.get('telegram')}
+    return {'id': user['id'], 'name': full_name(user), 'phone': user.get('phone'), 'telegram': user.get('telegram')} if user else None

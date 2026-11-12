@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { MapPin, BedDouble, Users, Ruler, CheckCircle2, Send, Heart, Flag, ChevronLeft, ChevronRight, ArrowRight, UserRound, DoorOpen } from 'lucide-vue-next'
+import { MapPin, BedDouble, Users, Ruler, CheckCircle2, Send, Heart, Flag, ChevronLeft, ChevronRight, ArrowRight, UserRound, DoorOpen, ShieldCheck } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
@@ -108,8 +108,10 @@ async function save() {
       </section>
       <section>
         <h4 class="font-bold mb-2">{{ $t('Uy egasi') }}</h4>
-        <p class="flex items-center gap-2 text-[15px] font-semibold mb-2"><UserRound class="size-[18px] text-muted" />{{ house.owner?.name }}</p>
+        <p class="flex items-center gap-2 text-[15px] font-semibold mb-2"><UserRound class="size-[18px] text-muted" />{{ house.owner?.name }}
+          <span v-if="house.verified" class="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-brand-50 text-brand-700 text-[12px] font-bold" data-testid="verified-badge"><ShieldCheck class="size-3.5" />{{ $t('TalabaGo tekshirgan') }}</span></p>
         <ContactButtons :phone="house.phone" :telegram="house.telegram" />
+        <p v-if="!house.phone && !house.telegram" class="text-[13.5px] text-muted">{{ $t('Aloqa ma’lumotlari ko‘rsatilmaydi. So‘rov yuboring — javobni ilovada olasiz.') }}</p>
       </section>
       <button v-if="mode === 'student'" class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-danger" @click="complain = true"><Flag class="size-4" />{{ $t('Shikoyat qilish') }}</button>
     </div>
