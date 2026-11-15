@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from . import common as C
 from .config import Settings, get_settings
 from .deps import get_store
-from .routers import admin, auth, content, listings, users
+from .routers import admin, admin_extra, auth, chat, content, exams, insights, listings, reviews, users
 from .stats import ensure_user_baseline
 from .storage import StorageError
 from .telegram import handle_update
@@ -35,6 +35,7 @@ FIELD_LABELS = {
     'course': 'Kurs', 'shift': 'Smena', 'city': 'Shahar', 'district': 'Tuman', 'title': 'Sarlavha', 'description': 'Tavsif',
     'salary': 'Maosh', 'price': 'Narx', 'address': 'Manzil', 'photos': 'Rasmlar', 'role': 'Rol', 'username': 'Login', 'text': 'Matn',
     'subject': 'Mavzu', 'message': 'Xabar', 'moveIn': 'Ko‘chish sanasi', 'rooms': 'Xonalar', 'capacity': 'Sig‘im', 'link': 'Havola',
+    'category': 'Faoliyat sohasi', 'type': 'Ish turi', 'stars': 'Baho', 'comment': 'Izoh', 'answers': 'Javoblar',
 }
 
 
@@ -195,7 +196,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         label = FIELD_LABELS.get(first['field'].split('.')[0], '')
         return JSONResponse({'detail': f'{label}: {first["message"]}' if label else first['message'], 'errors': errors}, status_code=422)
 
-    for r in (auth.router, users.router, listings.router, content.router, admin.router):
+    for r in (auth.router, users.router, listings.router, content.router, admin.router,
+              exams.router, chat.router, reviews.router, insights.router, admin_extra.router):
         app.include_router(r, prefix=API_PREFIX)
 
     # JSON javoblarni siqish (≈10× kichik; mobil internetda ro‘yxatlar tez ochiladi). /media (rasm/video) siqilmaydi — ular allaqachon siqilgan.

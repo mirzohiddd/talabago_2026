@@ -6,7 +6,8 @@
  */
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Eye, EyeOff, GripVertical, Video, Upload, X, CheckCircle2, ListChecks, Languages, FileText, Repeat2, Users } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Eye, EyeOff, GripVertical, Video, Upload, X, CheckCircle2, ListChecks, Languages, FileText, Repeat2, Users, Award } from 'lucide-vue-next'
+import FinalTestEditor from '@/components/crm/FinalTestEditor.vue'
 import PageHeader from '@/components/crm/PageHeader.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -35,7 +36,7 @@ const courseId = computed({ get: () => route.params.id || 'c-ru', set: (v) => ro
 const course = computed(() => crmStore.courses.find((c) => c.id === courseId.value))
 const courseOpts = computed(() => crmStore.courses.map((c) => ({ value: c.id, label: `${t(c.title)} · ${c.lessons.length}` })))
 const view = ref('lessons')
-const viewOpts = computed(() => [{ value: 'lessons', label: t('Darslar'), icon: ListChecks }, { value: 'progress', label: t('Talabalar progressi'), icon: Users }])
+const viewOpts = computed(() => [{ value: 'lessons', label: t('Darslar'), icon: ListChecks }, { value: 'exam', label: t('Yakuniy test'), icon: Award }, { value: 'progress', label: t('Talabalar progressi'), icon: Users }])
 
 async function save(mut, msg) {
   const draft = JSON.parse(JSON.stringify(course.value))
@@ -148,7 +149,7 @@ watch(courseId, () => (view.value = 'lessons'))
       </section>
 
       <div class="flex flex-wrap items-center gap-3 mt-4 mb-3">
-        <SegmentedControl v-model="view" :options="viewOpts" class="w-full sm:w-96" />
+        <SegmentedControl v-model="view" :options="viewOpts" class="w-full sm:w-[520px]" data-testid="course-view" />
         <BaseButton v-if="view === 'lessons'" class="ml-auto" :icon="Plus" data-testid="add-lesson" @click="openEditor(null)">{{ $t('Dars qo‘shish') }}</BaseButton>
       </div>
 
@@ -174,6 +175,9 @@ watch(courseId, () => (view.value = 'lessons'))
         </li>
         <li v-if="!course.lessons.length" class="p-8 text-center text-sm text-muted">{{ $t('Hali dars yo‘q') }}</li>
       </ol>
+
+      <!-- Yakuniy test -->
+      <FinalTestEditor v-else-if="view === 'exam'" :course-id="course.id" />
 
       <!-- Progress -->
       <div v-else class="crm-card overflow-x-auto">

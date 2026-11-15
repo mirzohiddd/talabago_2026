@@ -53,6 +53,8 @@ async function save() {
           <span class="chip bg-brand text-white">{{ $t(typeLabel) }}</span>
           <span class="chip bg-white"><component :is="job.format === 'online' ? Wifi : Building2" class="size-3.5" />{{ job.format === 'online' ? 'Online' : 'Offline' }}</span>
           <span v-if="timeLabel" class="chip bg-white"><Clock class="size-3.5" />{{ $t(timeLabel) }}</span>
+          <span v-if="job.category" class="chip bg-white text-ink-2">{{ $t(job.category) }}</span>
+          <span v-if="job.employerRating" class="chip bg-white text-[#a15c00]" data-testid="employer-rating">★ {{ job.employerRating.avg }} · {{ $t('{n} ta baho', { n: job.employerRating.count }) }}</span>
           <span v-if="job.verified" class="chip bg-white text-brand-700" data-testid="verified-badge"><ShieldCheck class="size-3.5" />{{ $t('TalabaGo tekshirgan') }}</span>
         </div>
         <p v-if="job.address" class="flex items-start gap-1.5 text-[13.5px] text-ink-2 mt-2"><MapPin class="size-4 shrink-0 mt-0.5" />{{ job.address }}</p>
@@ -90,6 +92,7 @@ async function save() {
       <RoundIllu kind="office" :size="120" class="mx-auto" />
       <h3 class="text-xl font-extrabold mt-4">{{ $t('Ariza yuborildi!') }}</h3>
       <p class="text-muted mt-1">{{ $t('Holatini “Arizalarim” bo‘limida kuzatishingiz mumkin.') }}</p>
+      <BaseButton v-if="job?.employerId" class="mt-4" variant="soft" data-testid="apply-chat" @click="open = false; router.push('/student/chats')">{{ $t('Ish beruvchiga yozish') }}</BaseButton>
     </div>
 
     <template #footer>

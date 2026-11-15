@@ -60,6 +60,7 @@ async def register(p, role, phone, first='Test', company=None, password='parol12
         await p.click('[data-testid=ob-next]'); await p.wait_for_timeout(250)
     await p.click(f'[data-testid=role-{role}]'); await p.click('[data-testid=ob-next]'); await p.wait_for_timeout(300)
     await p.fill('[data-testid=f-first] input', first)
+    await p.fill('[data-testid=f-last] input', 'Testov')
     await p.fill('[data-testid=f-phone] input', phone)
     if company:
         await p.fill('[data-testid=f-company] input', company)
@@ -97,9 +98,10 @@ async def main():
         await crm_login(adm)
         kpis = await adm.locator('[data-testid=kpi]').all_inner_texts()
         vals = [[x for x in k.split('\n') if x.strip()][1].strip() for k in kpis]
-        ok('S0 Dashboard: bo‘sh tizimda hamma ko‘rsatkich 0 (demo yo‘q)', len(kpis) == 11 and all(v == '0' for v in vals), vals)
+        # “Jami foydalanuvchilar” — boshlang‘ich hisob 41 (eski baza, profillari tiklanmagan; USERS_BASELINE), qolganlari 0
+        ok('S0 Dashboard: bo‘sh tizimda jami 41 (boshlang‘ich hisob), qolgan ko‘rsatkichlar 0 (demo yo‘q)', len(kpis) == 11 and vals[0] == '41' and all(v == '0' for v in vals[1:]), vals)
         nav = [x.strip().split('\n')[0] for x in await adm.locator('[data-testid=crm-sidebar] nav a').all_inner_texts()]
-        ok('S0 10 ta bo‘lim', len(nav) == 10, nav)
+        ok('S0 13 ta bo‘lim (sertifikatlar, chatlar, baholar qo‘shildi)', len(nav) == 13, nav)
         ok('S0 Nomi: TalabaGo Support', 'TALABAGO SUPPORT' in (await adm.inner_text('[data-testid=crm-sidebar]')).upper())
 
         # ================= 1. Ish beruvchi ro‘yxatdan o‘tadi va vakansiya joylaydi =================
@@ -109,6 +111,7 @@ async def main():
         ok('E1 Demo vakansiyalar yo‘q (bo‘sh holat)', await emp.locator('[data-testid=job-card]').count() == 0)
         await emp.goto(A + '/employer/new?tab=new'); await emp.wait_for_timeout(800)
         await emp.fill('[data-testid=jf-title] input', 'Frontend stajyor (Vue)')
+        await emp.select_option('[data-testid=jf-category] select', 'IT')
         await emp.fill('[data-testid=jf-salary] input', '4000000')
         await emp.select_option('[data-testid=jf-district] select', 'Yunusobod')
         await emp.fill('[data-testid=jf-schedule] input', '10:00-15:00')
@@ -233,7 +236,7 @@ async def main():
         # ================= 8. Dashboard real ma’lumotdan =================
         await adm.goto(C + '/dashboard'); await adm.wait_for_timeout(1200)
         total = [x for x in (await adm.locator('[data-testid=kpi]').first.inner_text()).split('\n') if x.strip()][1].strip()
-        ok('S8 Dashboard: jami foydalanuvchilar = 3 (real)', total == '3', total)
+        ok('S8 Dashboard: jami foydalanuvchilar = 41 + 3 yangi (real) = 44', total == '44', total)
         await adm.goto(C + '/users'); await adm.wait_for_timeout(1000)
         ok('S8 Foydalanuvchilar jadvali: 3 ta real hisob', await adm.locator('[data-testid=users-table] tbody tr').count() == 3)
         await adm.click('[data-testid=crm-collapse]'); await adm.reload(); await adm.wait_for_timeout(900)

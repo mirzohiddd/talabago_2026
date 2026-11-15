@@ -8,6 +8,7 @@ const v = {
   houses: () => import('@/views/shared/HousesBrowseView.vue'),
   settings: () => import('@/views/shared/SettingsView.vue'),
   support: () => import('@/views/shared/SupportView.vue'),
+  chats: () => import('@/views/shared/ChatsView.vue'),
 }
 // meta.title va meta.search — i18n kalitlari; meta.ads — sahifada reklama carousel bor
 const supportRoutes = [
@@ -21,13 +22,19 @@ const roleChildren = {
     { path: 'applications', component: () => import('@/views/student/ApplicationsView.vue'), meta: { title: 'Arizalarim', subtitle: 'Ish arizalari va ijara so‘rovlaringiz holati', illu: 'checklist', search: 'Arizalarni qidirish...' } },
     { path: 'courses', component: () => import('@/views/student/CoursesView.vue'), meta: { title: 'Kurslar', subtitle: 'Bepul online til kurslari: video, lug‘at, tarjima va test', illu: 'books' } },
     { path: 'courses/:courseId', component: () => import('@/views/student/CourseView.vue'), meta: { title: 'Kurslar' } },
+    { path: 'courses/:courseId/exam', component: () => import('@/views/student/ExamView.vue'), meta: { title: 'Yakuniy test' } },
     { path: 'courses/:courseId/:lessonId', component: () => import('@/views/student/LessonView.vue'), meta: { title: 'Kurslar' } },
+    { path: 'chats', component: v.chats, meta: { title: 'Chatlar', viewKey: 'chats' } },
+    { path: 'chats/:id', component: v.chats, meta: { title: 'Chatlar', viewKey: 'chats' } },
     { path: 'settings', component: v.settings, meta: { title: 'Sozlamalar', subtitle: 'Profil, til, bildirishnomalar va yordam', illu: 'desk-lamp' } },
   ],
   employer: [
     { path: 'jobs', component: v.jobs, meta: { title: 'Ishlar', subtitle: 'Platformadagi barcha vakansiyalar', illu: 'briefcase', search: 'Ish, kompaniya yoki tuman...', ads: true } },
     { path: 'new', component: () => import('@/views/shared/PostListingView.vue'), meta: { title: 'E’lon qo‘shish', subtitle: 'Vakansiyalaringizni joylang va boshqaring', illu: 'laptop', search: 'E’lonlarimni qidirish...' } },
     { path: 'applications', component: () => import('@/views/shared/IncomingView.vue'), meta: { title: 'Arizalar', subtitle: 'Talabalardan kelgan arizalar', illu: 'office-worker', search: 'Nomzod, OTM yoki vakansiya...' } },
+    { path: 'stats', component: () => import('@/views/employer/InsightsView.vue'), meta: { title: 'Statistika', subtitle: 'E’lonlaringiz ko‘rishlari, arizalar va qiziqishlar', illu: 'stats' } },
+    { path: 'chats', component: v.chats, meta: { title: 'Chatlar', viewKey: 'chats' } },
+    { path: 'chats/:id', component: v.chats, meta: { title: 'Chatlar', viewKey: 'chats' } },
     { path: 'settings', component: v.settings, meta: { title: 'Sozlamalar', subtitle: 'Profil, til, bildirishnomalar va yordam', illu: 'desk-lamp' } },
   ],
   landlord: [

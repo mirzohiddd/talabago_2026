@@ -5,8 +5,8 @@
  */
 import PageIntro from '@/components/layout/PageIntro.vue'
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { Eye, CheckCircle2, XCircle, CalendarClock, FileText, GraduationCap, MapPin, Cake, MessageSquareText, Briefcase, Home, CalendarDays } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { Eye, CheckCircle2, XCircle, CalendarClock, FileText, GraduationCap, MapPin, Cake, MessageSquareText, Briefcase, Home, CalendarDays, MessageCircle, Star, Flag } from 'lucide-vue-next'
 import ChipGroup from '@/components/ui/ChipGroup.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
@@ -20,7 +20,9 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import ContactButtons from '@/components/shared/ContactButtons.vue'
-import { applicationsApi, jobsApi, housingApi } from '@/services'
+import ReviewModal from '@/components/reviews/ReviewModal.vue'
+import StarRating from '@/components/reviews/StarRating.vue'
+import { applicationsApi, jobsApi, housingApi, chatApi } from '@/services'
 import { search, toast } from '@/stores/session'
 import { SHIFTS, RENT_TERMS, STATUS } from '@/config/roles'
 import { fileSize } from '@/utils/format'
@@ -45,7 +47,7 @@ async function load() {
 }
 onMounted(load)
 
-const STATUSES = computed(() => (isJob.value ? ['sent', 'viewed', 'interview', 'accepted', 'declined'] : ['sent', 'viewed', 'accepted', 'declined']))
+const STATUSES = computed(() => (isJob.value ? ['sent', 'viewed', 'interview', 'accepted', 'completed', 'declined'] : ['sent', 'viewed', 'accepted', 'declined']))
 const status = ref('all')
 const listing = ref('all')
 const statusOpts = computed(() => [{ value: 'all', label: `${t('Barchasi')} · ${items.value.length}` }, ...STATUSES.value.map((s) => ({ value: s, label: `${t(STATUS[s].label)} · ${items.value.filter((x) => x.status === s).length}` }))])
@@ -83,7 +85,7 @@ async function setStatus(s, extra = {}, silent = false) {
   const i = items.value.findIndex((x) => x.id === upd.id)
   if (i >= 0) items.value[i] = { ...items.value[i], ...upd }
   busy.value = ''
-  if (!silent) toast({ interview: t('Suhbatga taklif yuborildi'), accepted: t('Qabul qilindi'), declined: t('Rad etildi') }[s] || t('Saqlandi'))
+  if (!silent) toast({ interview: t('Suhbatga taklif yuborildi'), accepted: t('Qabul qilindi'), declined: t('Rad etildi'), completed: t('Ish yakunlandi. Endi talabani baholang') }[s] || t('Saqlandi'))
 }
 // Suhbatga chaqirish
 const ivOpen = ref(false)
@@ -106,7 +108,17 @@ async function openCv(cv) {
   else toast(t('Demo: CV fayli faqat nomi bilan saqlangan'), 'error')
 }
 const today = new Date().toISOString().slice(0, 10)
-const final = computed(() => current.value && ['accepted', 'declined'].includes(current.value.status))
+const final = computed(() => current.value && ['accepted', 'declined', 'completed'].includes(current.value.status))
+// Chat va baholash (faqat ish arizalari)
+const router = useRouter()
+const opening = ref(false)
+async function openChat() {
+  opening.value = true
+  try { const c = await chatApi.forApplication(current.value.id); router.push(`/employer/chats/${c.id}`) }
+  catch (e) { toast(t(e.message), 'error') } finally { opening.value = false }
+}
+const rvOpen = ref(false)
+function reviewed() { current.value.reviewed = true; const i = items.value.findIndex((x) => x.id === current.value.id); if (i >= 0) items.value[i] = { ...items.value[i], reviewed: true } }
 </script>
 
 <template>
@@ -132,7 +144,7 @@ const final = computed(() => current.value && ['accepted', 'declined'].includes(
               <td class="px-4 py-3">
                 <button class="flex items-center gap-3 text-left group" @click="open(x)">
                   <Avatar :name="x.student?.name" size="sm" />
-                  <span><span class="block font-semibold group-hover:text-brand-700">{{ x.student?.name }}</span><span class="block text-xs text-muted">{{ x.student?.university }}{{ x.student?.course ? `, ${$t('{n}-kurs', { n: x.student.course })}` : '' }}</span></span>
+                  <span><span class="block font-semibold group-hover:text-brand-700">{{ x.student?.name }}<span v-if="x.student?.rating" class="ml-1.5 text-[11.5px] font-bold text-[#a15c00]">★ {{ x.student.rating.avg }}</span></span><span class="block text-xs text-muted">{{ x.student?.university }}{{ x.student?.course ? `, ${$t('{n}-kurs', { n: x.student.course })}` : '' }}</span></span>
                 </button>
               </td>
               <td class="px-4 py-3 max-w-[220px]"><span class="line-clamp-2">{{ $tc(target(x)?.title) }}</span></td>
@@ -169,6 +181,7 @@ const final = computed(() => current.value && ['accepted', 'declined'].includes(
           <Avatar :name="current.student?.name" size="lg" />
           <div class="min-w-0">
             <StatusBadge :status="current.status" />
+            <p v-if="current.student?.rating" class="mt-1.5 text-[12.5px] text-muted flex items-center gap-1.5" data-testid="student-rating"><StarRating readonly :value="current.student.rating.avg" :size="14" />{{ current.student.rating.avg }} · {{ $t('{n} ta baho', { n: current.student.rating.count }) }}</p>
             <p class="text-[13px] text-muted mt-1.5">{{ isJob ? $t('Vakansiya') : $t('Uy') }}: <b class="text-ink">{{ $tc(target(current)?.title) }}</b></p>
           </div>
         </div>
@@ -206,10 +219,20 @@ const final = computed(() => current.value && ['accepted', 'declined'].includes(
           <BaseButton variant="danger" :icon="XCircle" :loading="busy === 'declined'" data-testid="act-decline" @click="rjOpen = true">{{ $t('Rad etish') }}</BaseButton>
           <BaseButton :icon="CheckCircle2" :loading="busy === 'accepted'" data-testid="act-accept" @click="setStatus('accepted')">{{ $t('Qabul qilish') }}</BaseButton>
         </div>
-        <p v-else-if="current" class="text-center text-sm text-muted py-2">{{ $t('Yakuniy holat') }}: <b class="text-ink">{{ $t(STATUS[current.status]?.label) }}</b></p>
+        <div v-else-if="current && isJob && current.status === 'accepted'" class="grid grid-cols-2 gap-2">
+          <BaseButton variant="outline" :icon="MessageCircle" :loading="opening" data-testid="act-chat" @click="openChat">{{ $t('Chat') }}</BaseButton>
+          <BaseButton :icon="Flag" :loading="busy === 'completed'" data-testid="act-complete" @click="setStatus('completed')">{{ $t('Ishni yakunlash') }}</BaseButton>
+        </div>
+        <div v-else-if="current && isJob && current.status === 'completed' && !current.reviewed" class="grid grid-cols-2 gap-2">
+          <BaseButton variant="outline" :icon="MessageCircle" :loading="opening" @click="openChat">{{ $t('Chat') }}</BaseButton>
+          <BaseButton :icon="Star" data-testid="act-review" @click="rvOpen = true">{{ $t('Talabani baholash') }}</BaseButton>
+        </div>
+        <p v-else-if="current" class="text-center text-sm text-muted py-2">{{ $t('Yakuniy holat') }}: <b class="text-ink">{{ $t(STATUS[current.status]?.label) }}</b><template v-if="current.status === 'completed'"> · {{ $t('Baholandi') }}</template></p>
+        <BaseButton v-if="current && isJob && !final" block variant="ghost" size="sm" class="mt-2" :icon="MessageCircle" :loading="opening" data-testid="act-chat-open" @click="openChat">{{ $t('Talaba bilan chat') }}</BaseButton>
       </template>
     </BaseModal>
 
+    <ReviewModal v-model="rvOpen" :application-id="current?.id" :name="current?.student?.name" :subtitle="current?.job?.title" @done="reviewed" />
     <BaseModal v-model="ivOpen" :title="$t('Suhbatga chaqirish')" :subtitle="current?.student?.name">
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-3">

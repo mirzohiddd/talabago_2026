@@ -6,7 +6,7 @@
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, onErrorCaptured } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Users, Briefcase, Building2, Megaphone, MessageSquareWarning, Settings, LogOut, Menu, X, Clock, GraduationCap, Inbox, LifeBuoy, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
+import { LayoutDashboard, Users, Briefcase, Building2, Megaphone, MessageSquareWarning, Settings, LogOut, Menu, X, Clock, GraduationCap, Inbox, LifeBuoy, PanelLeftClose, PanelLeftOpen, Award, MessagesSquare, Star } from 'lucide-vue-next'
 import AppLogo from '@/components/brand/AppLogo.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -35,7 +35,10 @@ const nav = computed(() => [
   { to: '/housing', label: 'Turar joylar', icon: Building2, badge: count('houses', (x) => x.status === 'pending') },
   { to: '/ads', label: 'Reklama boshqaruvi', icon: Megaphone },
   { to: '/courses', label: 'Kurslar boshqaruvi', icon: GraduationCap },
+  { to: '/certificates', label: 'Sertifikatlar va testlar', icon: Award },
   { to: '/applications', label: 'Arizalar va so‘rovlar', icon: Inbox },
+  { to: '/chats', label: 'Chatlar nazorati', icon: MessagesSquare },
+  { to: '/reviews', label: 'Baholar nazorati', icon: Star, badge: count('reviews', (r) => r.stars <= 2 && !r.hidden && !r.moderatedAt) },
   { to: '/support', label: 'Support', icon: LifeBuoy, badge: count('tickets', (x) => x.status === 'new' || x.unreadBySupport) },
   { to: '/complaints', label: 'Shikoyatlar', icon: MessageSquareWarning, badge: count('complaints', (c) => c.status === 'new') },
   { to: '/settings', label: 'Sozlamalar', icon: Settings },

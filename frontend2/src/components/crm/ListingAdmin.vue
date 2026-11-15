@@ -32,6 +32,9 @@ const props = defineProps({
   columns: Array, // [{ key, label, class? }]
   filterKey: String,
   filterOptions: Array,
+  filter2Key: String, // ikkinchi filtr (masalan, faoliyat sohasi)
+  filter2Options: Array,
+  filter2Label: String,
   searchFields: Array,
   api: Object, // { approve, reject, setStatus, update, remove }
   editFields: Array, // [{ key, label, type?, textarea? }]
@@ -46,6 +49,7 @@ const router = useRouter()
 const STATES = ['pending', 'active', 'rejected', 'hidden', 'closed']
 const status = ref(STATES.includes(route.query.status) ? route.query.status : 'all')
 const filter = ref('all')
+const filter2 = ref('all')
 const q = ref('')
 const page = ref(1)
 const PER = 12
@@ -58,11 +62,12 @@ const filtered = computed(() => {
   return props.items
     .filter((i) => status.value === 'all' || i.status === status.value)
     .filter((i) => filter.value === 'all' || i[props.filterKey] === filter.value)
+    .filter((i) => !props.filter2Key || filter2.value === 'all' || (i[props.filter2Key] || '') === filter2.value)
     .filter((i) => !s || props.searchFields.some((f) => String(i[f] ?? '').toLowerCase().includes(s)))
     .sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0) || Date.parse(b.createdAt) - Date.parse(a.createdAt))
 })
 const rows = computed(() => filtered.value.slice((page.value - 1) * PER, page.value * PER))
-watch([status, filter, q], () => (page.value = 1))
+watch([status, filter, filter2, q], () => (page.value = 1))
 
 const current = ref(null)
 const drawer = ref(false)
@@ -139,6 +144,7 @@ async function remove() {
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <div class="min-w-0 flex-1"><ChipGroup v-model="status" :options="statusChips" size="sm" data-testid="mod-status" /></div>
       <BaseSelect v-model="filter" class="w-56" :options="[{ value: 'all', label: $t('Barcha turlar') }, ...filterOptions]" />
+      <BaseSelect v-if="filter2Key" v-model="filter2" class="w-56" :options="[{ value: 'all', label: filter2Label || $t('Barchasi') }, ...filter2Options]" data-testid="filter2" />
     </div>
 
     <div class="crm-card overflow-hidden animate-fade-up">
@@ -226,6 +232,7 @@ async function remove() {
       <div class="grid sm:grid-cols-2 gap-4">
         <template v-for="f in editFields" :key="f.key">
           <BaseTextarea v-if="f.textarea" v-model="form[f.key]" :label="f.label" :rows="4" class="sm:col-span-2" />
+          <BaseSelect v-else-if="f.options" v-model="form[f.key]" :label="f.label" :options="f.options" :class="f.wide && 'sm:col-span-2'" />
           <BaseInput v-else v-model="form[f.key]" :label="f.label" :type="f.type || 'text'" :class="f.wide && 'sm:col-span-2'" />
         </template>
       </div>

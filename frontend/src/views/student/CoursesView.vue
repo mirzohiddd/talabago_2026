@@ -1,62 +1,74 @@
 <script setup>
-/** Kurslar: hozircha ikki bepul online kurs (Rus tili, Ingliz tili). Tarkibi TalabaGo Support’da boshqariladi. */
-import PageIntro from '@/components/layout/PageIntro.vue'
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { PlayCircle, BookOpen, Clock, Award } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeft, CheckCircle2, Lock, PlayCircle, Award, ChevronRight } from 'lucide-vue-next'
 import RoundIllu from '@/components/brand/RoundIllu.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
 import SkeletonCard from '@/components/ui/SkeletonCard.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import ErrorState from '@/components/ui/ErrorState.vue'
 import { coursesApi } from '@/services'
 
+const route = useRoute()
 const router = useRouter()
-const items = ref([])
+const course = ref(null)
+const progress = ref({ completed: [], scores: {} })
 const loading = ref(true)
-const error = ref(null)
-async function load() {
-  loading.value = true; error.value = null
-  try { items.value = await coursesApi.list() } catch (e) { error.value = e.message }
+onMounted(async () => {
+  course.value = await coursesApi.get(route.params.courseId)
+  if (course.value) progress.value = await coursesApi.progress(course.value.id)
   loading.value = false
-}
-onMounted(load)
-const nextLesson = (c) => c.lessons.find((l, i) => i >= c.done) || c.lessons.at(-1)
+})
+const cert = ref(null)
+onMounted(async () => { try { cert.value = (await coursesApi.certificates()).find((c) => c.courseId === route.params.courseId && c.status === 'valid') || null } catch { /* sertifikat bo‘lmasa ham sahifa ishlaydi */ } })
+const allDone = () => course.value && course.value.lessons.every((l) => done(l))
+const done = (l) => progress.value.completed.includes(l.id)
+const unlocked = (i) => i === 0 || done(course.value.lessons[i - 1]) || done(course.value.lessons[i])
 </script>
 
 <template>
-  <div class="page-narrow lg:max-w-5xl!">
-    <PageIntro class="mb-4" />
-    <div v-if="loading" class="grid md:grid-cols-2 gap-4"><SkeletonCard :count="2" media class="contents" /></div>
-    <ErrorState v-else-if="error" :message="error" @retry="load" />
-    <EmptyState v-else-if="!items.length" :title="$t('Kurslar hali e’lon qilinmagan')" :text="$t('Tez orada qo‘shiladi.')" illu="books" />
-    <div v-else class="grid md:grid-cols-2 gap-4 stagger" data-testid="course-list">
-      <article v-for="c in items" :key="c.id" class="card card-hover p-5 flex flex-col cursor-pointer" :data-testid="`course-${c.key}`" @click="router.push(`/student/courses/${c.id}`)">
-        <div class="flex items-start gap-4">
-          <div class="relative">
-            <RoundIllu :kind="c.key === 'ru' ? 'books' : 'chat'" :size="84" :float="false" />
-            <span class="absolute -bottom-1 -right-1 h-7 px-2 rounded-full bg-ink text-white text-[12px] font-extrabold grid place-items-center">{{ c.key === 'ru' ? 'RU' : 'EN' }}</span>
-          </div>
-          <div class="min-w-0 flex-1">
-            <span class="inline-flex h-6 px-2.5 items-center rounded-full bg-brand-50 text-brand-700 text-[11.5px] font-bold">{{ $t('Bepul') }} · {{ c.level }}</span>
-            <h2 class="text-[20px] font-extrabold tracking-tight mt-1.5">{{ $t(c.title) }}</h2>
-            <p class="text-[13px] text-muted">{{ $t(c.subtitle) }}</p>
-          </div>
+  <div class="page-narrow">
+    <button class="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink mb-3" @click="router.push('/student/courses')"><ArrowLeft class="size-4" />{{ $t('Kurslar') }}</button>
+    <SkeletonCard v-if="loading" :count="3" />
+    <EmptyState v-else-if="!course" :title="$t('Kurs topilmadi')" text="" />
+    <template v-else>
+      <div class="flex items-center gap-4">
+        <RoundIllu :kind="course.key === 'ru' ? 'books' : 'chat'" :size="76" :float="false" />
+        <div>
+          <h1 class="text-[24px] font-extrabold tracking-tight">{{ $t(course.title) }}</h1>
+          <p class="text-sm text-muted">{{ $t('{a} / {b} dars tugatildi', { a: course.done, b: course.lessons.length }) }} · {{ course.percent }}%</p>
         </div>
-        <p class="text-[14px] text-ink-2 mt-4 leading-relaxed">{{ $tc(c.description) }}</p>
-        <div class="flex items-center gap-4 mt-4 text-[13px] text-ink-2">
-          <span class="inline-flex items-center gap-1.5"><BookOpen class="size-4 text-muted" />{{ $t('{n} ta dars', { n: c.lessons.length }) }}</span>
-          <span class="inline-flex items-center gap-1.5"><Clock class="size-4 text-muted" />~{{ c.lessons.length * 12 }} {{ $t('daqiqa') }}</span>
-          <span v-if="c.percent === 100" class="inline-flex items-center gap-1.5 text-success font-semibold"><Award class="size-4" />{{ $t('Tugatildi') }}</span>
-        </div>
-        <div class="mt-4">
-          <div class="flex justify-between text-[12.5px] font-semibold mb-1.5"><span>{{ $t('Progress') }}</span><span class="tabular-nums" :data-testid="`progress-${c.key}`">{{ c.percent }}%</span></div>
-          <div class="h-2 rounded-full bg-surface overflow-hidden" role="progressbar" :aria-valuenow="c.percent" aria-valuemin="0" aria-valuemax="100"><div class="h-full rounded-full bg-brand transition-all duration-700" :style="{ width: `${c.percent}%` }" /></div>
-        </div>
-        <BaseButton block class="mt-5" :icon="PlayCircle" @click.stop="router.push(`/student/courses/${c.id}/${nextLesson(c)?.id}`)">
-          {{ c.done ? $t('Davom ettirish') : $t('Boshlash') }} · {{ nextLesson(c)?.order }}-{{ $t('dars') }}
-        </BaseButton>
-      </article>
-    </div>
+      </div>
+      <div class="h-2 rounded-full bg-surface overflow-hidden mt-4"><div class="h-full bg-brand rounded-full transition-all" :style="{ width: `${course.percent}%` }" /></div>
+      <ol class="mt-5 space-y-2.5 stagger" data-testid="lesson-list">
+        <li v-for="(l, i) in course.lessons" :key="l.id">
+          <button
+            :disabled="!unlocked(i)"
+            :class="['w-full card p-4 flex items-center gap-4 text-left transition', unlocked(i) ? 'card-hover' : 'opacity-60 cursor-not-allowed']"
+            @click="router.push(`/student/courses/${course.id}/${l.id}`)"
+          >
+            <span :class="['size-11 rounded-2xl grid place-items-center shrink-0 font-extrabold', done(l) ? 'bg-brand text-white' : unlocked(i) ? 'bg-brand-50 text-brand-700' : 'bg-surface text-muted']">
+              <CheckCircle2 v-if="done(l)" class="size-5" /><Lock v-else-if="!unlocked(i)" class="size-[18px]" /><template v-else>{{ l.order }}</template>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-bold">{{ $tc(l.title) }}</span>
+              <span class="block text-[13px] text-muted truncate">{{ $tc(l.summary) }}</span>
+            </span>
+            <span v-if="done(l)" class="text-[12px] font-bold text-success tabular-nums">{{ progress.scores[l.id] }}/5</span>
+            <PlayCircle v-else-if="unlocked(i)" class="size-6 text-brand-600" />
+          </button>
+        </li>
+      </ol>
+      <!-- Yakuniy test va sertifikat -->
+      <button v-if="course.exam?.available" :class="['mt-4 w-full card p-4 flex items-center gap-4 text-left transition border-2', allDone() ? 'card-hover border-brand' : 'border-dashed border-line opacity-80']"
+        data-testid="final-exam" @click="router.push(`/student/courses/${course.id}/exam`)">
+        <span :class="['size-11 rounded-2xl grid place-items-center shrink-0', cert ? 'bg-brand text-white' : allDone() ? 'bg-brand-50 text-brand-700' : 'bg-surface text-muted']">
+          <Award v-if="cert || allDone()" class="size-5" /><Lock v-else class="size-[18px]" />
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block font-bold">{{ $t('Yakuniy test va sertifikat') }}</span>
+          <span class="block text-[13px] text-muted">{{ cert ? $t('Sertifikat olindi · {p}%', { p: cert.percent }) : allDone() ? $t('{n} ta savol · 2 ta urinish', { n: course.exam.questions }) : $t('Barcha darslar tugagach ochiladi') }}</span>
+        </span>
+        <ChevronRight class="size-5 text-muted" />
+      </button>
+    </template>
   </div>
 </template>

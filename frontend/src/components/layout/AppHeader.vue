@@ -5,13 +5,13 @@
  */
 import { ref, nextTick, watch, computed, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, Bell, X, LifeBuoy } from 'lucide-vue-next'
+import { Search, Bell, X, LifeBuoy, MessageCircle } from 'lucide-vue-next'
 import AppLogo from '@/components/brand/AppLogo.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import NotificationsPopover from './NotificationsPopover.vue'
 import ProfilePopover from './ProfilePopover.vue'
 import { search, session } from '@/stores/session'
-import { supportApi, fullName } from '@/services'
+import { supportApi, chatApi, fullName } from '@/services'
 import { haptic } from '@/services/telegram'
 
 const route = useRoute()
@@ -37,10 +37,16 @@ async function refreshSupport(force = false) {
   supportAt = Date.now()
   try { supportUnread.value = (await supportApi.list()).filter((t) => t.unreadByUser).length } catch { supportAt = 0 }
 }
+// Chat: o‘qilmagan xabarlar soni (talaba va ish beruvchi)
+const hasChat = computed(() => ['student', 'employer'].includes(session.role))
+const chatUnread = ref(0)
+async function refreshChat() { if (session.token && hasChat.value) chatUnread.value = await chatApi.unread() }
+const chatTimer = setInterval(() => { if (document.visibilityState === 'visible') refreshChat() }, 20000)
+onBeforeUnmount(() => clearInterval(chatTimer))
 const timer = setInterval(() => { if (document.visibilityState === 'visible') refreshSupport(true) }, 60000)
 onBeforeUnmount(() => clearInterval(timer))
 
-watch(() => route.path, () => { search.query = ''; search.open = false; notifOpen.value = false; profileOpen.value = false; refreshSupport() }, { immediate: true })
+watch(() => route.path, () => { search.query = ''; search.open = false; notifOpen.value = false; profileOpen.value = false; refreshSupport(); refreshChat() }, { immediate: true })
 </script>
 
 <template>
@@ -59,6 +65,10 @@ watch(() => route.path, () => { search.query = ''; search.open = false; notifOpe
           </label>
           <span v-else class="hidden lg:block mr-auto" />
           <button v-if="hasSearch" class="icon-btn lg:hidden" :aria-label="$t('Qidiruv')" @click="openSearch"><Search class="size-[22px]" /></button>
+          <button v-if="hasChat" class="icon-btn relative" :aria-label="$t('Chatlar')" :title="$t('Chatlar')" data-testid="chat-btn" @click="router.push(`/${session.role}/chats`)">
+            <MessageCircle class="size-[22px]" />
+            <span v-if="chatUnread" class="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-brand text-white text-[10px] font-bold ring-2 ring-white" data-testid="chat-badge">{{ chatUnread }}</span>
+          </button>
           <button class="icon-btn relative" :aria-label="$t('Texnik yordam')" :title="$t('Texnik yordam')" data-testid="help-btn" @click="router.push(`/${session.role}/support`)">
             <LifeBuoy class="size-[22px]" />
             <span v-if="supportUnread" class="absolute top-2 right-2 size-2.5 rounded-full bg-brand ring-2 ring-white" />

@@ -31,7 +31,9 @@ const timeLabel = computed(() => WORK_TIMES.find((x) => x.value === props.job.wo
     </p>
     <div class="mt-3 pt-3 border-t border-line flex flex-wrap items-center gap-1.5 mt-auto">
       <span class="tag tag-brand">{{ $t(typeLabel) }}</span>
+      <span v-if="job.category" class="tag" data-testid="job-category">{{ $t(job.category) }}</span>
       <span class="tag">{{ job.format === 'online' ? 'Online' : 'Offline' }}</span>
+      <span v-if="job.employerRating" class="tag text-[#a15c00]!" :title="$t('Ish beruvchi reytingi')">★ {{ job.employerRating.avg }}</span>
       <span v-if="timeLabel" class="tag"><Clock class="size-3" />{{ $t(timeLabel) }}</span>
       <span v-if="job.applied" class="ml-auto inline-flex items-center gap-1 text-[12px] font-semibold text-success whitespace-nowrap"><CheckCircle2 class="size-4" />{{ $t('Ariza yuborilgan') }}</span>
       <button

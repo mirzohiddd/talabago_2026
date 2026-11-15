@@ -9,6 +9,8 @@ from ..schemas import ActiveIn, AppStatusIn, ApplyIn, HouseIn, JobIn, OccupancyI
 from ..storage import JsonStore
 from ..telegram import esc, notify_admins, notify_user
 from ..uploads import delete_media
+from .chat import new_chat
+from .reviews import ratings_map
 
 router = APIRouter(tags=['listings'])
 student = require_role('student')
@@ -19,6 +21,16 @@ KIND = {
     'job': {'coll': 'jobs', 'owner': 'employerId', 'prefix': 'j', 'related': 'applications', 'rel_key': 'jobId', 'saved': 'jobs', 'label': 'Vakansiya'},
     'house': {'coll': 'houses', 'owner': 'ownerId', 'prefix': 'h', 'related': 'requests', 'rel_key': 'houseId', 'saved': 'houses', 'label': 'Uy e’loni'},
 }
+
+
+def bump_stat(stats: dict, job_id: str, metric: str) -> None:
+    day = C.now_iso()[:10]
+    entry = stats.setdefault(job_id, {})
+    series = entry.setdefault(metric, {})
+    series[day] = series.get(day, 0) + 1
+    if len(series) > 400:                                          # ~1 yildan eski kunlar o‘chiriladi
+        for d in sorted(series)[:-400]:
+            del series[d]
 
 
 def _truthy(v) -> bool:
@@ -45,11 +57,12 @@ def list_jobs(request: Request, user: dict = Depends(get_current_user), store: J
     applied = {a['jobId'] for a in db['applications'] if a['studentId'] == user['id'] and a['status'] != 'withdrawn'}
     salary_min = C.SALARY_MIN.get(f.get('salary', ''), 0)
     work_time = f.get('workTime') or f.get('work_time')
+    ratings = ratings_map(store)
     out = []
     for j in db['jobs']:
         if j['status'] != 'active' or j['employerId'] in blocked:
             continue
-        if any(f.get(k) not in (None, '', 'all') and j.get(k) != f[k] for k in ('type', 'format', 'city', 'district')):
+        if any(f.get(k) not in (None, '', 'all') and j.get(k) != f[k] for k in ('type', 'format', 'city', 'district', 'category')):
             continue
         if work_time not in (None, '', 'all') and j.get('workTime') != work_time:
             continue
@@ -59,7 +72,8 @@ def list_jobs(request: Request, user: dict = Depends(get_current_user), store: J
             continue
         if not C.matches(j, f.get('q'), ['title', 'company', 'category', 'district', 'city']):
             continue
-        out.append({**C.public_listing(j), 'saved': j['id'] in saved, 'applied': j['id'] in applied})
+        out.append({**C.public_listing(j), 'saved': j['id'] in saved, 'applied': j['id'] in applied,
+                    'employerRating': ratings.get(j.get('employerId')) if j.get('employerId') else None})
     return C.by_date_desc(out)
 
 
@@ -128,7 +142,8 @@ def _get_visible(store: JsonStore, kind: str, item_id: str, user: dict) -> dict:
 
 @router.get('/jobs/{item_id}')
 def get_job(item_id: str, user: dict = Depends(get_current_user), store: JsonStore = Depends(get_store)):
-    return _get_visible(store, 'job', item_id, user)
+    j = _get_visible(store, 'job', item_id, user)
+    return {**j, 'employerRating': ratings_map(store).get(j.get('employerId')) if j.get('employerId') else None}
 
 
 @router.get('/houses/{item_id}')
@@ -142,10 +157,12 @@ def _view(kind: str):
         k = KIND[kind]
         if ratelimit.hit(f'view:{kind}:{item_id}:{user["id"]}', 1, 3600):
             return {'ok': True}
-        with store.tx(k['coll']) as db:
+        with store.tx(k['coll'], 'jobstats') as db:
             item = next((x for x in db[k['coll']] if x['id'] == item_id), None)
             if item and item['status'] == 'active' and item[k['owner']] != user['id']:
                 item['views'] = (item.get('views') or 0) + 1
+                if kind == 'job':                                  # ish beruvchi monitoringi uchun kunlik ko‘rishlar
+                    bump_stat(db['jobstats'], item_id, 'views')
         return {'ok': True}
     return handler
 
@@ -165,7 +182,10 @@ def _toggle_save(kind: str):
                 lst.remove(item_id)
                 return False
             lst.append(item_id)
-            return True
+        if kind == 'job':                                          # “qiziqish” — saqlab qo‘yish (kunlik)
+            with store.tx('jobstats') as st:
+                bump_stat(st['jobstats'], item_id, 'saves')
+        return True
     return handler
 
 
@@ -293,7 +313,7 @@ def set_occupancy(item_id: str, body: OccupancyIn, user: dict = Depends(landlord
 @router.post('/jobs/{job_id}/apply', status_code=201, dependencies=[Depends(ratelimit.limit('apply', 30, 3600))])
 def apply(job_id: str, body: ApplyIn, user: dict = Depends(student), store: JsonStore = Depends(get_store)):
     at = C.now_iso()
-    with store.tx('jobs', 'applications', 'notifications', 'users') as db:
+    with store.tx('jobs', 'applications', 'notifications', 'users', 'chats') as db:
         job = next((j for j in db['jobs'] if j['id'] == job_id and j['status'] == 'active'), None)
         if not job or job['employerId'] in C.blocked_ids(db['users']):
             raise HTTPException(404, 'Vakansiya topilmadi yoki yopilgan')
@@ -305,6 +325,7 @@ def apply(job_id: str, body: ApplyIn, user: dict = Depends(student), store: Json
         owner = next((u for u in db['users'] if u['id'] == job['employerId']), None) if job.get('employerId') else None
         if owner:
             C.add_notification(db['notifications'], job['employerId'], 'user', 'Yangi ariza', f'{C.full_name(user)} → {job["title"]}', '/employer/applications')
+            db['chats'].insert(0, new_chat(app, job))      # ariza bilan birga talaba ↔ ish beruvchi suhbati ochiladi
     if owner:
         notify_user(C.tg_chat(owner), f'📩 <b>Yangi ariza</b>\n{esc(C.full_name(user))} → {esc(job["title"])}', '/employer/applications')
     elif C.is_admin_listing(job):  # Support qo‘shgan e’lon — arizani Support ko‘radi
@@ -339,7 +360,11 @@ def rent_request(house_id: str, body: RentRequestIn, user: dict = Depends(studen
 def my_applications(user: dict = Depends(student), store: JsonStore = Depends(get_store)):
     db = store.read_many('applications', 'jobs')
     jobs = {j['id']: j for j in db['jobs']}
-    return [{**a, 'job': C.public_listing(jobs[a['jobId']]) if a['jobId'] in jobs else None} for a in C.by_date_desc([a for a in db['applications'] if a['studentId'] == user['id']])]
+    ratings = ratings_map(store)
+    reviewed = {r['applicationId'] for r in store.peek('reviews')['reviews'] if r['fromId'] == user['id']}
+    return [{**a, 'job': C.public_listing(jobs[a['jobId']]) if a['jobId'] in jobs else None, 'reviewed': a['id'] in reviewed,
+             'employerRating': ratings.get(jobs[a['jobId']].get('employerId')) if a['jobId'] in jobs and jobs[a['jobId']].get('employerId') else None}
+            for a in C.by_date_desc([a for a in db['applications'] if a['studentId'] == user['id']])]
 
 
 @router.get('/me/rental-requests')
@@ -355,7 +380,7 @@ def _withdraw(coll: str):
             x = next((a for a in db[coll] if a['id'] == item_id and a['studentId'] == user['id']), None)
             if not x:
                 raise HTTPException(404, 'Topilmadi')
-            if x['status'] in ('accepted', 'declined', 'withdrawn'):
+            if x['status'] in ('accepted', 'declined', 'withdrawn', 'completed'):
                 raise HTTPException(409, 'Bu holatda bekor qilib bo‘lmaydi')
             C.push_status(x, 'withdrawn')
         return x
@@ -373,6 +398,8 @@ def employer_apps(request: Request, user: dict = Depends(employer), store: JsonS
     db = store.read_many('applications', 'jobs', 'users')
     jobs = {j['id']: j for j in db['jobs'] if j['employerId'] == user['id']}
     users = {u['id']: u for u in db['users']}
+    ratings = ratings_map(store)
+    reviewed = {r['applicationId'] for r in store.peek('reviews')['reviews'] if r['fromId'] == user['id']}
     out = []
     for a in db['applications']:
         if a['jobId'] not in jobs or a['status'] == 'withdrawn':
@@ -380,9 +407,12 @@ def employer_apps(request: Request, user: dict = Depends(employer), store: JsonS
         if f.get('status') not in (None, '', 'all', a['status']) or f.get('job_id') not in (None, '', 'all', a['jobId']):
             continue
         card = C.student_card(users.get(a['studentId']))
+        if card:
+            card['rating'] = ratings.get(a['studentId'])
         row = {**a, 'job': jobs[a['jobId']], 'student': card}
         if not C.matches({'n': (card or {}).get('name'), 'u': (card or {}).get('university'), 'j': jobs[a['jobId']]['title']}, f.get('q'), ['n', 'u', 'j']):
             continue
+        row['reviewed'] = a['id'] in reviewed
         out.append(row)
     return C.by_date_desc(out)
 
@@ -406,7 +436,8 @@ def landlord_requests(request: Request, user: dict = Depends(landlord), store: J
     return C.by_date_desc(out)
 
 
-APP_TEXT = {'viewed': 'Arizangiz ko‘rib chiqildi', 'interview': 'Sizni suhbatga chaqirishdi', 'accepted': 'Arizangiz qabul qilindi', 'declined': 'Arizangiz rad etildi'}
+APP_TEXT = {'viewed': 'Arizangiz ko‘rib chiqildi', 'interview': 'Sizni suhbatga chaqirishdi', 'accepted': 'Arizangiz qabul qilindi', 'declined': 'Arizangiz rad etildi',
+            'completed': 'Ish yakunlandi — ish beruvchini baholang'}
 REQ_TEXT = {'viewed': 'So‘rovingiz ko‘rildi', 'accepted': 'Ijara so‘rovingiz qabul qilindi', 'declined': 'Ijara so‘rovingiz rad etildi'}
 
 
@@ -419,6 +450,10 @@ def set_app_status(item_id: str, body: AppStatusIn, user: dict = Depends(employe
             raise HTTPException(404, 'Ariza topilmadi')
         if body.status == 'interview' and not body.interviewAt:
             raise HTTPException(422, 'Suhbat vaqtini kiriting')
+        if body.status == 'completed' and a['status'] != 'accepted':
+            raise HTTPException(409, 'Ishni yakunlash uchun avval arizani qabul qiling')
+        if a['status'] == 'completed':
+            raise HTTPException(409, 'Ish yakunlangan — holatni o‘zgartirib bo‘lmaydi')
         if a['status'] == body.status and body.status == 'viewed':
             return a
         extra = {'interviewAt': body.interviewAt} if body.interviewAt else {}
@@ -445,3 +480,22 @@ def set_req_status(item_id: str, body: ReqStatusIn, user: dict = Depends(landlor
     if body.status != 'viewed':
         notify_user(C.tg_chat(st), f'🏠 <b>{REQ_TEXT[body.status]}</b>\n{esc(h["title"])}', '/student/applications?tab=requests')
     return r
+
+
+@router.post('/me/applications/{item_id}/complete')
+def student_complete(item_id: str, user: dict = Depends(student), store: JsonStore = Depends(get_store)):
+    """Talaba ham ishni yakunlangan deb belgilashi mumkin (faqat qabul qilingan ariza) — keyin ikkala tomon baholaydi."""
+    with store.tx('applications', 'jobs', 'notifications', 'users') as db:
+        a = next((x for x in db['applications'] if x['id'] == item_id and x['studentId'] == user['id']), None)
+        if not a:
+            raise HTTPException(404, 'Ariza topilmadi')
+        if a['status'] != 'accepted':
+            raise HTTPException(409, 'Faqat qabul qilingan ishni yakunlash mumkin')
+        C.push_status(a, 'completed', 'Talaba ishni yakunladi')
+        job = next((j for j in db['jobs'] if j['id'] == a['jobId']), None)
+        owner = job and job.get('employerId') and next((u for u in db['users'] if u['id'] == job['employerId']), None)
+        if owner:
+            C.add_notification(db['notifications'], owner['id'], 'check', 'Ish yakunlandi — talabani baholang', f'{C.full_name(user)} → {job["title"]}', '/employer/applications')
+    if owner:
+        notify_user(C.tg_chat(owner), f'✅ <b>Ish yakunlandi</b>\n{esc(C.full_name(user))} → {esc(job["title"])}\nTalabani baholang.', '/employer/applications')
+    return a

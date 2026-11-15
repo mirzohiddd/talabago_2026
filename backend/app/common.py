@@ -19,7 +19,12 @@ TICKET_TYPES = ('technical', 'account', 'job', 'housing', 'courses', 'other')
 TICKET_STATUSES = ('new', 'in_review', 'answered', 'resolved')
 COMPLAINT_STATUSES = ('new', 'in_review', 'resolved', 'dismissed')
 LISTING_STATUSES = ('pending', 'active', 'rejected', 'closed')
-APPLICATION_STATUSES = ('sent', 'viewed', 'interview', 'accepted', 'declined')
+APPLICATION_STATUSES = ('sent', 'viewed', 'interview', 'accepted', 'declined', 'completed')
+# Faoliyat sohalari — shared/domain.js JOB_CATEGORIES bilan bir xil (qiymat = o‘zbekcha nom, eski e’lonlar ham shu qiymatlarda)
+JOB_CATEGORIES = ('IT', 'Savdo', 'Marketing', 'Ta’lim', 'Xizmat ko‘rsatish', 'Yetkazib berish', 'Mijozlar bilan ishlash',
+                  'Umumiy ovqatlanish', 'Dizayn', 'Moliya', 'Ofis ishi', 'Boshqa')
+EXAM_MAX_ATTEMPTS = 2       # yakuniy test: jami urinishlar soni
+EXAM_PASS_PERCENT = 70      # standart o‘tish chegarasi (Support har kurs uchun o‘zgartira oladi)
 REQUEST_STATUSES = ('sent', 'viewed', 'accepted', 'declined')
 SALARY_MIN = {'1': 1_000_000, '3': 3_000_000, '5': 5_000_000}
 PRICE_MAX = {'1': 1_000_000, '2': 2_000_000, '3': 3_000_000, '5': 5_000_000}

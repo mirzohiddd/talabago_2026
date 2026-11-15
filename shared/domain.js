@@ -42,7 +42,9 @@ export const SALARY_RANGES = [
 ]
 export const monthlyEstimate = (j) => j.salary * ({ hour: 160, day: 22, week: 4, month: 1 }[j.salaryPeriod] || 1)
 
-export const JOB_CATEGORIES = ['IT', 'Marketing', 'Ta’lim', 'Savdo', 'Xizmat ko‘rsatish', 'Yetkazib berish', 'Mijozlar bilan ishlash', 'Boshqa']
+/** Faoliyat sohalari — backend C.JOB_CATEGORIES bilan bir xil (qiymat = o‘zbekcha nom = i18n kaliti) */
+export const JOB_CATEGORIES = ['IT', 'Savdo', 'Marketing', 'Ta’lim', 'Xizmat ko‘rsatish', 'Yetkazib berish', 'Mijozlar bilan ishlash',
+  'Umumiy ovqatlanish', 'Dizayn', 'Moliya', 'Ofis ishi', 'Boshqa']
 export const INDUSTRIES = ['IT va texnologiya', 'Savdo', 'Umumiy ovqatlanish', 'Ta’lim', 'Marketing', 'Logistika', 'Moliya', 'Boshqa']
 
 /* ---------------- Turar joy ---------------- */
@@ -135,6 +137,10 @@ export const STATUS = {
   accepted: { label: 'Qabul qilindi', tone: 'green' },
   declined: { label: 'Rad etildi', tone: 'red' },
   withdrawn: { label: 'Bekor qilindi', tone: 'gray' },
+  completed: { label: 'Ish yakunlandi', tone: 'brand' },
+  // Sertifikat
+  valid: { label: 'Amalda', tone: 'green' },
+  revoked: { label: 'Bekor qilingan', tone: 'red' },
   // Support / shikoyat
   new: { label: 'Yangi', tone: 'brand' },
   in_review: { label: 'Ko‘rib chiqilmoqda', tone: 'amber' },
@@ -148,7 +154,7 @@ export const STATUS = {
   draft: { label: 'Yashirin', tone: 'gray' },
 }
 export const LISTING_STATUSES = ['pending', 'active', 'rejected', 'closed']
-export const APPLICATION_STATUSES = ['sent', 'viewed', 'interview', 'accepted', 'declined']
+export const APPLICATION_STATUSES = ['sent', 'viewed', 'interview', 'accepted', 'declined', 'completed']
 export const REQUEST_STATUSES = ['sent', 'viewed', 'accepted', 'declined']
 
 /* ---------------- Support ---------------- */

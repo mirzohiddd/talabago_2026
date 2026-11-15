@@ -37,8 +37,10 @@ def courses(user: dict = Depends(get_current_user), store: JsonStore = Depends(g
         lessons = _published(c)
         p = next((x for x in db['progress'] if x['userId'] == user['id'] and x['courseId'] == c['id']), None)
         done = len([l for l in lessons if p and l['id'] in p['completed']])
-        out.append({**c, 'lessons': [_public_lesson(l) for l in lessons], 'done': done,
-                    'percent': round(done / len(lessons) * 100) if lessons else 0})
+        ft = c.get('finalTest') or {}
+        exam = {'available': ft.get('status') == 'published' and bool(ft.get('questions')), 'questions': len(ft.get('questions') or [])}
+        out.append({**{k: v for k, v in c.items() if k != 'finalTest'}, 'lessons': [_public_lesson(l) for l in lessons], 'done': done,
+                    'percent': round(done / len(lessons) * 100) if lessons else 0, 'exam': exam})   # yakuniy test javoblari yuborilmaydi
     return out
 
 

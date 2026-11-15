@@ -201,7 +201,7 @@ class JobIn(In):
     salaryPeriod: Literal[C.SALARY_PERIODS]
     workTime: Literal[C.WORK_TIMES] = 'flexible'
     schedule: Str(120) = ''
-    category: Str(60) = ''
+    category: Str(60)                       # faoliyat sohasi — majburiy (C.JOB_CATEGORIES)
     description: Str(3000) = Field(min_length=20)
     requirements: list[Str(200)] = Field(default_factory=list, max_length=20)
     tags: list[Str(40)] = Field(default_factory=list, max_length=10)
@@ -222,6 +222,13 @@ class JobIn(In):
     @classmethod
     def _tg(cls, v):
         return _tg_handle(v)
+
+    @field_validator('category')
+    @classmethod
+    def _category(cls, v):
+        if v not in C.JOB_CATEGORIES:
+            raise ValueError('Faoliyat sohasini ro‘yxatdan tanlang')
+        return v
 
 
 class HouseIn(In):
@@ -288,7 +295,7 @@ class RentRequestIn(In):
 
 
 class AppStatusIn(In):
-    status: Literal['viewed', 'interview', 'accepted', 'declined']
+    status: Literal['viewed', 'interview', 'accepted', 'declined', 'completed']
     interviewAt: Str(40) | None = None
     note: Str(500) | None = None
 
@@ -338,3 +345,24 @@ class ComplaintIn(In):
     target: ComplaintTarget
     category: Str(80) = Field(min_length=2)
     message: Str(2000) = ''
+
+
+# ----------------------------------------------------------------- yakuniy test / chat / baholash
+class ExamSubmitIn(In):
+    answers: list[int | None] = Field(max_length=100)
+
+
+class ChatMessageIn(In):
+    text: Str(2000) = Field(min_length=1)
+
+    @field_validator('text')
+    @classmethod
+    def _t(cls, v):
+        if not v.strip():
+            raise ValueError('Xabar bo‘sh bo‘lmasin')
+        return v
+
+
+class ReviewIn(In):
+    stars: int = Field(ge=1, le=5)
+    comment: Str(500) = ''

@@ -35,7 +35,7 @@ function onType(v) { form.salaryPeriod = DEFAULT_PERIOD[v] }
 const errors = ref({})
 function submit() {
   errors.value = validate(form, {
-    title: [rules.required, rules.min(4)], company: [rules.required], salary: [rules.required, rules.positive],
+    title: [rules.required, rules.min(4)], company: [rules.required], category: [rules.required], salary: [rules.required, rules.positive],
     schedule: [rules.required], description: [rules.required, rules.min(30)], phone: [rules.phoneRequired], telegram: [rules.telegram],
     ...(form.format === 'offline' ? { district: [rules.required] } : {}),
   })
@@ -59,7 +59,7 @@ function submit() {
       <div class="grid sm:grid-cols-2 gap-4">
         <BaseInput v-model="form.title" :label="$t('Ish nomi')" :icon="Briefcase" :placeholder="$t('Masalan, Kafe xodimi')" required :maxlength="80" :error="errors.title" data-testid="jf-title" />
         <BaseInput v-model="form.company" :label="$t('Kompaniya')" :icon="Building2" required :error="errors.company" />
-        <BaseSelect v-model="form.category" :label="$t('Soha')" :options="catOpts" :placeholder="$t('Tanlang')" />
+        <BaseSelect v-model="form.category" :label="$t('Faoliyat sohasi')" :options="catOpts" :placeholder="$t('Tanlang')" required :error="errors.category" data-testid="jf-category" />
         <div><span class="label">{{ $t('Format') }} <span class="text-danger">*</span></span><SegmentedControl v-model="form.format" :options="formatOpts" /></div>
       </div>
       <div v-if="form.format === 'offline'" class="grid sm:grid-cols-2 gap-4">

@@ -6,7 +6,7 @@ import ChipGroup from '@/components/ui/ChipGroup.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
-import { JOB_TYPES, WORK_TIMES, SALARY_RANGES, CITIES, CITY_LIST, useOptions } from '@/config/roles'
+import { JOB_TYPES, WORK_TIMES, SALARY_RANGES, CITIES, CITY_LIST, JOB_CATEGORIES, useOptions } from '@/config/roles'
 import { t } from '@/i18n'
 
 const f = defineModel({ type: Object, required: true })
@@ -17,12 +17,14 @@ const cityOpts = useOptions(CITY_LIST, { all: 'Barcha shaharlar' })
 const districtOpts = computed(() => [{ value: 'all', label: t('Barcha tumanlar') }, ...(CITIES[f.value.city] || []).map((d) => ({ value: d, label: t(d) }))])
 const timeOpts = useOptions(WORK_TIMES, { all: 'Har qanday vaqt' })
 const salaryOpts = useOptions(SALARY_RANGES)
-function reset() { Object.assign(f.value, { type: 'all', format: 'all', city: 'all', district: 'all', workTime: 'all', salary: 'all', saved: false }) }
+const catOpts = useOptions(JOB_CATEGORIES, { all: 'Barcha sohalar' })
+function reset() { Object.assign(f.value, { type: 'all', category: 'all', format: 'all', city: 'all', district: 'all', workTime: 'all', salary: 'all', saved: false }) }
 </script>
 
 <template>
   <div class="space-y-5">
     <div><span class="label">{{ $t('Ish turi') }}</span><ChipGroup v-model="f.type" :options="typeOpts" size="sm" wrap /></div>
+    <BaseSelect v-model="f.category" :label="$t('Faoliyat sohasi')" :options="catOpts" data-testid="filter-category" />
     <div><span class="label">{{ $t('Format') }}</span><SegmentedControl v-model="f.format" :options="formatOpts" /></div>
     <BaseSelect v-model="f.city" :label="$t('Shahar')" :options="cityOpts" @change="f.district = 'all'" />
     <BaseSelect v-model="f.district" :label="$t('Tuman')" :options="districtOpts" :disabled="f.city === 'all'" />

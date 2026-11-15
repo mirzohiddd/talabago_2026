@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { CheckCircle2, Briefcase, Home, Inbox, Eye, User, BellOff, CalendarClock, LifeBuoy, XCircle, Clock } from 'lucide-vue-next'
+import { CheckCircle2, Briefcase, Home, Inbox, Eye, User, BellOff, CalendarClock, LifeBuoy, XCircle, Clock, MessageCircle, Star } from 'lucide-vue-next'
 import PopoverPanel from './PopoverPanel.vue'
 import { notificationsApi } from '@/services'
 import { session } from '@/stores/session'
@@ -11,7 +11,7 @@ const emit = defineEmits(['count'])
 const router = useRouter()
 const items = ref([])
 const loading = ref(true)
-const icons = { check: CheckCircle2, briefcase: Briefcase, home: Home, inbox: Inbox, eye: Eye, user: User, calendar: CalendarClock, life: LifeBuoy, x: XCircle, clock: Clock }
+const icons = { check: CheckCircle2, briefcase: Briefcase, home: Home, inbox: Inbox, eye: Eye, user: User, calendar: CalendarClock, life: LifeBuoy, x: XCircle, clock: Clock, message: MessageCircle, star: Star }
 
 async function load(quiet = false) {
   if (!session.token) return

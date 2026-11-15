@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { Briefcase, Building2, PlusCircle, Inbox, Users, GraduationCap, KeyRound, Settings, FileText, BookOpen } from 'lucide-vue-next'
+import { Briefcase, Building2, PlusCircle, Inbox, Users, GraduationCap, KeyRound, Settings, FileText, BookOpen, BarChart3 } from 'lucide-vue-next'
 import { t } from '@/i18n'
 
 export * from '@shared/domain.js'
@@ -30,6 +30,7 @@ export const ROLES = {
       { to: '/employer/jobs', label: 'Ishlar', icon: Briefcase },
       { to: '/employer/new', label: 'E’lon qo‘shish', icon: PlusCircle },
       { to: '/employer/applications', label: 'Arizalar', icon: Users },
+      { to: '/employer/stats', label: 'Statistika', icon: BarChart3 },
       { to: '/employer/settings', label: 'Sozlamalar', icon: Settings },
     ],
   },

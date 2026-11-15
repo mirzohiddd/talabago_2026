@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { Wallet, MapPin, CalendarClock, Eye, Users, Wifi, Building2, Phone, Send, UserRound } from 'lucide-vue-next'
 import ListingAdmin from '@/components/crm/ListingAdmin.vue'
 import { crmStore, ensureCrmLoaded, crmApi, fullName } from '@/services/crm'
-import { JOB_TYPE_LABELS } from '@/config/status'
+import { JOB_TYPE_LABELS, JOB_CATEGORIES } from '@/config/status'
 import { salaryText } from '@/utils/format'
 import { t } from '@/i18n'
 
@@ -21,8 +21,9 @@ const columns = computed(() => [
   { key: 'applications', label: t('Arizalar'), class: 'text-right' },
 ])
 const typeOpts = computed(() => Object.entries(JOB_TYPE_LABELS).map(([value, label]) => ({ value, label: t(label) })))
+const catOpts = computed(() => JOB_CATEGORIES.map((c) => ({ value: c, label: t(c) })))
 const editFields = computed(() => [
-  { key: 'title', label: t('Ish nomi'), wide: true }, { key: 'company', label: t('Kompaniya') }, { key: 'salary', label: t('Maosh'), type: 'number' },
+  { key: 'title', label: t('Ish nomi'), wide: true }, { key: 'category', label: t('Faoliyat sohasi'), options: [{ value: '', label: t('Tanlanmagan') }, ...catOpts.value] }, { key: 'company', label: t('Kompaniya') }, { key: 'salary', label: t('Maosh'), type: 'number' },
   { key: 'schedule', label: t('Ish jadvali'), wide: true }, { key: 'description', label: t('Tavsif'), textarea: true },
 ])
 const REASONS = ['Maosh yoki ish vaqti aniq emas', 'Tavsif juda qisqa', 'Aloqa ma’lumotlari noto‘g‘ri', 'Qoidalarga zid mazmun']
@@ -31,7 +32,7 @@ const REASONS = ['Maosh yoki ish vaqti aniq emas', 'Tavsif juda qisqa', 'Aloqa m
 <template>
   <ListingAdmin
     :title="$t('Ish e’lonlari')" :items="crmStore.jobs" :loading="loading" :columns="columns" testid="jobs-table" illu="briefcase"
-    filter-key="type" :filter-options="typeOpts" :search-fields="['title', 'company', 'category', 'city', 'district']"
+    filter-key="type" :filter-options="typeOpts" filter2-key="category" :filter2-options="catOpts" :filter2-label="$t('Barcha sohalar')" :search-fields="['title', 'company', 'category', 'city', 'district']"
     :api="crmApi.jobs" :edit-fields="editFields" :reject-reasons="REASONS" kind="job" :add-label="$t('E’lon qo‘shish')"
   >
     <template #title="{ item }"><p class="font-semibold max-w-[220px] truncate">{{ item.title }}</p><p class="text-xs text-muted">{{ $t(item.category || '') }}</p></template>

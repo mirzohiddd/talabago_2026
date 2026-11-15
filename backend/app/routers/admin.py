@@ -65,7 +65,8 @@ def complaints(store: JsonStore = Depends(get_store)):
 
 # Support paneli avtomatik yangilanishi: har bir kolleksiyaning o‘zgarish belgisi (JSON o‘qilmaydi — juda arzon).
 # Panel shu endpointni tez-tez so‘raydi va faqat belgisi o‘zgargan ro‘yxatlarni qayta yuklaydi.
-WATCHED = ('users', 'jobs', 'houses', 'applications', 'requests', 'courses', 'progress', 'tickets', 'complaints', 'settings', 'ads')
+WATCHED = ('users', 'jobs', 'houses', 'applications', 'requests', 'courses', 'progress', 'tickets', 'complaints', 'settings', 'ads',
+           'exams', 'certificates', 'chats', 'messages', 'reviews')
 
 
 @router.get('/crm/changes')
@@ -157,6 +158,14 @@ class AdminJobIn(JobIn, AdminListingMeta):
     salaryNegotiable: bool = False          # “Kelishiladi” — maosh noma’lum
     description: Str(3000) = ''
     address: Str(200) = ''
+    category: Str(60) = ''
+
+    @field_validator('category')
+    @classmethod
+    def _category(cls, v):                  # admin e’lonida soha ixtiyoriy, lekin berilsa — ro‘yxatdan
+        if v and v not in C.JOB_CATEGORIES:
+            raise ValueError('Faoliyat sohasini ro‘yxatdan tanlang')
+        return v
 
     _s = field_validator('salary', mode='before')(classmethod(lambda cls, v: None if v in ('', 0, '0') else v))
 
@@ -267,6 +276,12 @@ def _moderation(coll: str, owner_key: str, label: str, link: str):
                         v = float(v) if v not in (None, '') else None
                     except (TypeError, ValueError) as e:
                         raise HTTPException(422, 'area: son kiriting') from e
+                elif k == 'category' and coll == 'jobs':
+                    if v and v not in C.JOB_CATEGORIES:
+                        raise HTTPException(422, 'Faoliyat sohasini ro‘yxatdan tanlang')
+                    v = v or ''
+                elif k == 'type' and coll == 'jobs' and v not in C.JOB_TYPES:
+                    raise HTTPException(422, 'Ish turi noto‘g‘ri')
                 elif k in ('salaryNegotiable', 'priceNegotiable'):
                     v = bool(v)
                 elif k in NEGOTIABLE and v in (None, '', 0, '0'):

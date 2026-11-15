@@ -1,7 +1,7 @@
 /**
  * Servis qatlami — komponentlar faqat shu funksiyalarni chaqiradi. Barcha ma’lumot TalabaGo API’dan (FastAPI, /api/v1).
  */
-import { http, httpForm } from './http'
+import { http, httpForm, API_URL } from './http'
 import { getInitData } from './telegram'
 
 export const fullName = (u) => (u ? [u.firstName, u.lastName].filter(Boolean).join(' ') : '')
@@ -74,6 +74,31 @@ export const applicationsApi = {
   setEmployerStatus(id, status, extra = {}) { return http(`/employer/applications/${id}`, { method: 'PATCH', body: { status, ...extra } }) },
   forLandlord({ status, houseId, q } = {}) { return http('/landlord/requests', { params: { status, house_id: houseId, q } }) },
   setLandlordStatus(id, status, extra = {}) { return http(`/landlord/requests/${id}`, { method: 'PATCH', body: { status, ...extra } }) },
+  /** Talaba: qabul qilingan ishni “yakunlandi” deb belgilash (keyin o‘zaro baholash ochiladi) */
+  complete(id) { return http(`/me/applications/${id}/complete`, { method: 'POST' }) },
+}
+
+/* ============================== CHAT (talaba ↔ ish beruvchi) ============================== */
+export const chatApi = {
+  list() { return http('/chats') },
+  unread() { return http('/chats/unread').then((r) => r.count).catch(() => 0) },
+  get(id) { return http(`/chats/${id}`) },
+  forApplication(appId) { return http(`/applications/${appId}/chat`, { method: 'POST' }) },
+  messages(id, after) { return http(`/chats/${id}/messages`, { params: { after } }) },
+  send(id, text) { return http(`/chats/${id}/messages`, { method: 'POST', body: { text } }) },
+  read(id) { return http(`/chats/${id}/read`, { method: 'POST' }).catch(() => {}) },
+}
+
+/* ============================== BAHOLASH ============================== */
+export const reviewsApi = {
+  forApplication(appId) { return http(`/applications/${appId}/reviews`) },
+  create(appId, { stars, comment }) { return http(`/applications/${appId}/review`, { method: 'POST', body: { stars, comment } }) },
+  ofUser(userId) { return http(`/users/${userId}/reviews`) },
+}
+
+/* ============================== ISH BERUVCHI MONITORINGI ============================== */
+export const insightsApi = {
+  get(days = 30) { return http('/employer/insights', { params: { days } }) },
 }
 
 /* ============================== KURSLAR ============================== */
@@ -83,6 +108,13 @@ export const coursesApi = {
   progress(courseId) { return http(`/courses/${courseId}/progress`) },
   /** Javoblar serverga yuboriladi — ball server tomonda hisoblanadi */
   completeLesson(courseId, lessonId, answers) { return http(`/courses/${courseId}/lessons/${lessonId}/complete`, { method: 'POST', body: { answers } }) },
+  /** Yakuniy test: savollar (to‘g‘ri javoblarsiz), urinishlar, sertifikat */
+  exam(courseId) { return http(`/courses/${courseId}/exam`) },
+  submitExam(courseId, answers) { return http(`/courses/${courseId}/exam/submit`, { method: 'POST', body: { answers } }) },
+  certificates() { return http('/me/certificates') },
+  /** Ommaviy PDF va tekshirish sahifasi (QR shu sahifaga olib boradi) */
+  certificatePdfUrl(code) { return `${API_URL}/certificates/${encodeURIComponent(code)}/pdf` },
+  certificatePageUrl(code) { return `${API_URL}/certificates/${encodeURIComponent(code)}/page` },
 }
 
 /* ============================== SUPPORT ============================== */

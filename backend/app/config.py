@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     CORS_ORIGIN_REGEX: str = ''  # masalan: https://.*\.trycloudflare\.com (Vite proxy ishlatilsa shart emas)
     FRONTEND_URL: str = 'http://localhost:5173'
     SUPPORT_URL: str = 'http://localhost:5174'
+    # Sertifikat QR-kodi uchun API’ning ommaviy manzili (masalan https://talabago-api.onrender.com). Bo‘sh — so‘rov manzilidan olinadi
+    PUBLIC_API_URL: str = ''
 
     # --- Saqlash ---
     DATA_DIR: Path = BASE_DIR / 'data'

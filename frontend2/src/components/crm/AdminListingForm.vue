@@ -17,7 +17,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import PhoneInput from '@/components/ui/PhoneInput.vue'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import MediaImg from '@/components/ui/MediaImg.vue'
-import { JOB_TYPES, JOB_FORMATS, SALARY_PERIODS, WORK_TIMES, HOUSE_TYPES, AUDIENCES, AMENITIES, CITIES, CITY_LIST } from '@/config/status'
+import { JOB_TYPES, JOB_FORMATS, SALARY_PERIODS, WORK_TIMES, HOUSE_TYPES, AUDIENCES, AMENITIES, CITIES, CITY_LIST, JOB_CATEGORIES } from '@/config/status'
 import { phoneProblem, PHONE_MESSAGES } from '@shared/phone'
 import { uploadFile } from '@/services/http'
 import { toast } from '@/stores/toast'
@@ -46,7 +46,7 @@ function blank() {
   const v = s.verification || {}
   const src = s.source || {}
   return {
-    title: s.title || '', company: s.company || '', type: s.type || (isJob.value ? 'hourly' : 'flat'), format: s.format || 'offline',
+    title: s.title || '', company: s.company || '', category: s.category || '', type: s.type || (isJob.value ? 'hourly' : 'flat'), format: s.format || 'offline',
     salary: s.salary ?? '', salaryPeriod: s.salaryPeriod || 'month', salaryNegotiable: editingItem(s) ? !!(s.salaryNegotiable || s.salary == null) : false, workTime: s.workTime || 'flexible', schedule: s.schedule || '',
     city: s.city || 'Toshkent', district: s.district || '', address: s.address || '', requirementsText: (s.requirements || []).join('\n'),
     description: s.description || '', phone: s.phone || '', telegram: (s.telegram || '').replace(/^@/, ''), contactName: s.contactName || '',
@@ -99,7 +99,7 @@ function payload() {
     verification: { ownerContacted: form.ownerContacted, ownerConsent: form.ownerConsent, phoneConsent: form.phoneConsent, method: form.method, note: form.note.trim() },
   }
   const body = isJob.value
-    ? { ...common, company: form.company.trim(), type: form.type, format: form.format, workTime: form.workTime,
+    ? { ...common, company: form.company.trim(), category: form.category, type: form.type, format: form.format, workTime: form.workTime,
         salary: form.salaryNegotiable || form.salary === '' ? null : +form.salary, salaryNegotiable: form.salaryNegotiable || form.salary === '', salaryPeriod: form.salaryPeriod,
         schedule: form.schedule.trim(), district: form.format === 'online' ? null : form.district || null, address: form.address.trim(),
         requirements: form.requirementsText.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 20) }
@@ -157,6 +157,7 @@ async function save() {
         <BaseInput v-model="form.title" :label="isJob ? $t('Lavozim') : $t('E’lon nomi')" :error="errors.title" required class="sm:col-span-2" data-testid="al-title" />
         <template v-if="isJob">
           <BaseInput v-model="form.company" :label="$t('Ish joyi / kompaniya')" :placeholder="$t('Ixtiyoriy')" :error="errors.company" data-testid="al-company" />
+          <BaseSelect v-model="form.category" :label="$t('Faoliyat sohasi')" :options="[{ value: '', label: $t('Tanlanmagan') }, ...JOB_CATEGORIES.map((c) => ({ value: c, label: $t(c) }))]" data-testid="al-category" />
           <BaseSelect v-model="form.type" :label="$t('Ish turi')" :options="opts(JOB_TYPES)" required />
           <div class="sm:col-span-2">
             <div class="flex items-end gap-2">

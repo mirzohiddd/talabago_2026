@@ -29,8 +29,9 @@ log = logging.getLogger('talabago.storage')
 LIST_COLLECTIONS = (
     'users', 'admins', 'jobs', 'houses', 'applications', 'requests', 'courses', 'progress',
     'tickets', 'complaints', 'notifications', 'ads',
+    'exams', 'certificates', 'chats', 'messages', 'reviews',
 )
-DICT_COLLECTIONS = ('saved', 'settings', 'meta')
+DICT_COLLECTIONS = ('saved', 'settings', 'meta', 'jobstats')
 
 
 class StorageError(RuntimeError):

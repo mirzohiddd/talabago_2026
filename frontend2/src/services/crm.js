@@ -10,6 +10,7 @@ export const fullName = (u) => (u ? [u.firstName, u.lastName].filter(Boolean).jo
 const SOURCES = {
   users: '/crm/users', jobs: '/crm/jobs', houses: '/crm/houses', applications: '/crm/applications', requests: '/crm/rental-requests',
   courses: '/crm/courses', progress: '/crm/progress', tickets: '/crm/support/tickets', complaints: '/crm/complaints',
+  exams: '/crm/exams', certificates: '/crm/certificates', chats: '/crm/chats', reviews: '/crm/reviews',
 }
 const defaultSettings = () => ({
   profile: { name: '', email: '', avatar: null },
@@ -147,6 +148,36 @@ export const crmApi = {
     const body = JSON.parse(JSON.stringify(course))
     body.lessons.forEach((l, i) => (l.order = i + 1))
     return put('courses', await http(`/crm/courses/${course.id}`, { method: 'PUT', body }))
+  },
+
+  // ---- Yakuniy test va sertifikatlar ----
+  finalTest: (courseId) => http(`/crm/courses/${courseId}/final-test`),
+  saveFinalTest: (courseId, body) => http(`/crm/courses/${courseId}/final-test`, { method: 'PUT', body }),
+  async resetExam(userId, courseId) {
+    const r = await http('/crm/exams/reset', { method: 'POST', body: { userId, courseId } })
+    crmStore.exams = await http('/crm/exams')
+    return r
+  },
+  setCertificateStatus: async (id, status, reason = '') => {
+    await http(`/crm/certificates/${id}`, { method: 'PATCH', body: { status, reason } })
+    crmStore.certificates = await http('/crm/certificates')
+  },
+
+  // ---- Chatlar nazorati ----
+  chatMessages: (chatId) => http(`/crm/chats/${chatId}/messages`),
+  setChatLocked: async (id, locked) => {
+    await http(`/crm/chats/${id}`, { method: 'PATCH', body: { locked } })
+    const c = crmStore.chats.find((x) => x.id === id)
+    if (c) c.locked = locked
+  },
+  setMessageHidden: (id, hidden) => http(`/crm/messages/${id}`, { method: 'PATCH', body: { hidden } }),
+
+  // ---- Baholar nazorati ----
+  setReviewHidden: async (id, hidden, note = '') => {
+    const r = await http(`/crm/reviews/${id}`, { method: 'PATCH', body: { hidden, note } })
+    const x = crmStore.reviews.find((y) => y.id === id)
+    if (x) Object.assign(x, r)
+    return r
   },
 
   // ---- Support ----
