@@ -9,8 +9,8 @@ from ..schemas import ActiveIn, AppStatusIn, ApplyIn, HouseIn, JobIn, OccupancyI
 from ..storage import JsonStore
 from ..telegram import esc, notify_admins, notify_user
 from ..uploads import delete_media
-from .chat import new_chat
-from .reviews import ratings_map
+from ..chat import new_chat
+from ..reviews import ratings_map
 
 router = APIRouter(tags=['listings'])
 student = require_role('student')

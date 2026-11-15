@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from .. import common as C
-from .. import ratelimit
-from ..deps import get_current_user, get_store
-from ..schemas import ChatMessageIn
-from ..storage import JsonStore
-from ..telegram import esc, notify_user
+from . import common as C
+from . import ratelimit
+from .deps import get_current_user, get_store
+from .schemas import ChatMessageIn
+from .storage import JsonStore
+from .telegram import esc, notify_user
 
 router = APIRouter(tags=['chat'])
 ROLE_PATH = {'student': '/student/chats', 'employer': '/employer/chats'}
