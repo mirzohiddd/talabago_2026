@@ -18,7 +18,8 @@ from fastapi.staticfiles import StaticFiles
 from . import common as C
 from .config import Settings, get_settings
 from .deps import get_store
-from .routers import admin, admin_extra, auth, chat, content, exams, insights, listings, reviews, users
+from .routers import admin, auth, content, listings, users
+from . import admin_extra, chat, exams, insights, reviews
 from .stats import ensure_user_baseline
 from .storage import StorageError
 from .telegram import handle_update

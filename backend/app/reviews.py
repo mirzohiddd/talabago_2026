@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from .. import common as C
-from ..deps import get_current_user, get_store
-from ..schemas import ReviewIn
-from ..storage import JsonStore
-from ..telegram import notify_user
+from . import common as C
+from .deps import get_current_user, get_store
+from .schemas import ReviewIn
+from .storage import JsonStore
+from .telegram import notify_user
 
 router = APIRouter(tags=['reviews'])
 
