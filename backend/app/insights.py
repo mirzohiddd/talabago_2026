@@ -9,9 +9,9 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
 
-from .. import common as C
-from ..deps import get_store, require_role
-from ..storage import JsonStore
+from . import common as C
+from .deps import get_store, require_role
+from .storage import JsonStore
 from .reviews import rating_summary
 
 router = APIRouter(tags=['insights'])

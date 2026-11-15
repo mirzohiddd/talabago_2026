@@ -12,14 +12,14 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 
-from .. import common as C
-from .. import ratelimit
-from ..certificate import format_date, render_pdf
-from ..config import Settings, get_settings
-from ..deps import get_current_user, get_store, require_role
-from ..schemas import ExamSubmitIn
-from ..storage import JsonStore
-from ..telegram import esc, notify_user
+from . import common as C
+from . import ratelimit
+from .certificate import format_date, render_pdf
+from .config import Settings, get_settings
+from .deps import get_current_user, get_store, require_role
+from .schemas import ExamSubmitIn
+from .storage import JsonStore
+from .telegram import esc, notify_user
 
 router = APIRouter(tags=['exams'])
 student = require_role('student')

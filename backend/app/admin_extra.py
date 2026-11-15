@@ -6,10 +6,10 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .. import common as C
-from ..config import Settings, get_settings
-from ..deps import get_admin, get_store
-from ..storage import JsonStore
+from . import common as C
+from .config import Settings, get_settings
+from .deps import get_admin, get_store
+from .storage import JsonStore
 from .chat import HIDDEN_TEXT
 from .exams import cert_view, verify_url
 

@@ -23,7 +23,13 @@ MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 
 
 @lru_cache
 def _font(weight: str, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(ASSETS / 'fonts' / f'Inter-{weight}.otf'), size)
+    font = ImageFont.truetype(str(ASSETS / 'fonts' / 'Inter-Regular.ttf'), size)
+    font.set_variation_by_name({
+        'Regular': 'Regular',
+        'SemiBold': 'SemiBold',
+        'ExtraBold': 'ExtraBold',
+    }.get(weight, 'Regular'))
+    return font
 
 
 def _fit(text: str, weight: str, size: int, max_w: int) -> ImageFont.FreeTypeFont:
